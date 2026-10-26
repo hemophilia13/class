@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>[통합과학2] 3-2-1 과학 기술과 미래 사회 - 실시간 인터랙티브 수업</title>
+  <title>[통합과학2] 3-2-1 과학 기술과 미래 사회 - 실시간 수업 & 통합 분석 대시보드</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- PeerJS for Real-time Cross-Device Sync -->
@@ -23,13 +23,11 @@
       width: 100vw;
       user-select: none;
     }
-    /* Allow full text selection inside modals, code blocks, and inputs */
-    .selectable-text, .selectable-text *, pre, code, input, textarea {
+    .selectable-text, .selectable-text *, pre, code, input, textarea, select {
       user-select: text !important;
       -webkit-user-select: text !important;
     }
 
-    /* Slide Viewport (16:9 Scaled Container) */
     #stage-wrapper {
       position: relative;
       width: 100%;
@@ -75,7 +73,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Interactive Whiteboard Canvas Layer */
     #whiteboard-canvas {
       position: absolute;
       top: 0;
@@ -91,7 +88,6 @@
       cursor: crosshair;
     }
 
-    /* Teacher vs Student Blank Styles */
     .blank-slot {
       display: inline-flex;
       align-items: center;
@@ -100,7 +96,6 @@
       margin: 2px 3px;
     }
 
-    /* Teacher Click Pill */
     .teacher-pill {
       display: inline-flex;
       align-items: center;
@@ -140,7 +135,6 @@
       display: none;
     }
 
-    /* Student Direct Input */
     .student-input-wrap {
       display: inline-flex;
       align-items: center;
@@ -175,8 +169,14 @@
       background: #fff1f2;
       color: #be123c;
     }
+    .highlight-review-target {
+      animation: reviewBlink 1.2s ease-in-out 3;
+    }
+    @keyframes reviewBlink {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+      50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0.75); border-color: #f59e0b !important; }
+    }
 
-    /* Custom Scrollbar inside slide */
     .slide-page::-webkit-scrollbar {
       width: 6px;
     }
@@ -198,7 +198,7 @@
         <span id="entry-room-badge" class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">방 코드: SCI2026</span>
       </div>
       <h1 class="text-2xl font-black text-slate-900 mb-1">01. 과학 기술과 미래 사회</h1>
-      <p class="text-sm text-slate-500 mb-5">학번과 이름을 입력하고 입장하면 빈칸 채우기와 퀴즈에 바로 참여할 수 있습니다.</p>
+      <p class="text-sm text-slate-500 mb-5">5자리 학번(예: 10205 → 1학년 2반 5번)과 이름을 입력하면 반별 대시보드에 자동 분류됩니다.</p>
 
       <div class="space-y-3 mb-6">
         <div>
@@ -206,7 +206,7 @@
           <input id="student-room-input" type="text" value="SCI2026" class="w-full px-3.5 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50/50 font-black text-indigo-900 text-sm uppercase focus:outline-none focus:border-indigo-600">
         </div>
         <div>
-          <label class="block text-xs font-bold text-slate-700 mb-1">학번 (예: 10101)</label>
+          <label class="block text-xs font-bold text-slate-700 mb-1">학번 (5자리 권장, 예: 10101)</label>
           <input id="student-id-input" type="text" placeholder="10101" class="w-full px-3.5 py-3 rounded-xl border border-slate-300 font-bold text-base focus:outline-none focus:border-emerald-600">
         </div>
         <div>
@@ -230,11 +230,11 @@
        TOP NAVIGATION & CONTROL BAR
        ========================================== -->
   <header class="h-16 bg-slate-900 border-b border-slate-800 px-3 md:px-5 flex items-center justify-between gap-2 z-40">
-    <!-- Left: Role Badge, Instant Mode Switch, QR Invite Button & Connection Info -->
+    <!-- Left -->
     <div class="flex items-center gap-1.5">
       <span id="role-badge" class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-indigo-600 text-white">교사 모드</span>
       
-      <button id="switch-to-student-btn" type="button" onclick="openStudentEntryModal()" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition cursor-pointer" title="학생 입장 화면 열기">
+      <button id="switch-to-student-btn" type="button" onclick="openStudentEntryModal()" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition cursor-pointer">
         👨‍🎓 학생화면 전환
       </button>
 
@@ -259,14 +259,13 @@
       <button id="next-slide-btn" type="button" onclick="changeSlide(1)" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1 transition cursor-pointer">
         <span class="hidden sm:inline">다음</span> ▶
       </button>
-      <button id="sync-lock-btn" type="button" onclick="toggleSlideSyncLock()" class="hidden px-2.5 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold hover:bg-indigo-600/50 transition cursor-pointer" title="교사가 넘기는 페이지를 학생도 함께 보도록 고정">
+      <button id="sync-lock-btn" type="button" onclick="toggleSlideSyncLock()" class="hidden px-2.5 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold hover:bg-indigo-600/50 transition cursor-pointer">
         🔒 화면동기화 ON
       </button>
     </div>
 
-    <!-- Right: Whiteboard & Submission Controls -->
+    <!-- Right: Whiteboard, Student Wrong-Note & Teacher Analytics Dashboard -->
     <div class="flex items-center gap-1.5">
-      <!-- Teacher Only: Whiteboard Controls -->
       <div id="teacher-wb-bar" class="hidden md:flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
         <button id="wb-toggle-btn" type="button" onclick="toggleWhiteboardMode()" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-700 text-slate-200 hover:bg-slate-600 transition cursor-pointer">
           ✏️ 판서 OFF
@@ -280,27 +279,26 @@
         </div>
       </div>
 
-      <!-- Teacher Only: Reveal Slide Blanks, Quiz Results & Open Dashboard -->
-      <button id="teacher-reveal-slide-btn" type="button" onclick="revealCurrentSlideBlanks()" class="hidden sm:inline-flex px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-indigo-300 transition cursor-pointer" title="교사 화면에만 정답을 표시하며 학생 입력칸에는 답을 띄우지 않습니다">
+      <button id="teacher-reveal-slide-btn" type="button" onclick="revealCurrentSlideBlanks()" class="hidden sm:inline-flex px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-indigo-300 transition cursor-pointer">
         교사화면 정답 표시
       </button>
       <button id="teacher-quiz-stat-btn" type="button" onclick="openQuizStatsModal()" class="hidden px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-extrabold transition flex items-center gap-1 shadow cursor-pointer">
-        🏆 퀴즈 결과 확인
+        🏆 퀴즈 결과
       </button>
       <button id="teacher-dashboard-btn" type="button" onclick="openTeacherDashboard()" class="hidden px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition flex items-center gap-1.5 shadow cursor-pointer">
-        📊 답안 수합 (<span id="student-count-badge">0</span>)
+        📊 답안 수합·분석 (<span id="student-count-badge">0</span>)
       </button>
 
-      <!-- Student Only: Progress & Submit Button -->
-      <div id="student-top-actions" class="hidden items-center gap-2">
-        <div class="text-xs font-bold text-slate-300 hidden sm:block">
-          빈칸: <span id="student-score-live" class="text-emerald-400 font-extrabold">0</span> / 58 · 퀴즈: <span id="student-quiz-live" class="text-amber-400 font-extrabold">채점전</span>
+      <!-- Student Only Actions -->
+      <div id="student-top-actions" class="hidden items-center gap-1.5">
+        <div class="text-xs font-bold text-slate-300 hidden lg:block">
+          빈칸: <span id="student-score-live" class="text-emerald-400 font-extrabold">0</span>/58 · 퀴즈: <span id="student-quiz-live" class="text-amber-400 font-extrabold">채점전</span>
         </div>
-        <button type="button" onclick="submitStudentWork(true)" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow transition cursor-pointer">
-          📤 선생님께 제출하기
+        <button type="button" onclick="openStudentWrongNoteModal()" class="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow transition cursor-pointer flex items-center gap-1">
+          📓 오답노트·피드백 <span id="feedback-unread-dot" class="hidden w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
         </button>
-        <button type="button" onclick="openStudentEntryModal()" class="px-2 py-1.5 rounded-lg bg-slate-800 text-slate-300 text-[11px] font-bold border border-slate-700">
-          정보수정
+        <button type="button" onclick="submitStudentWork(true)" class="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold shadow transition cursor-pointer">
+          📤 제출하기
         </button>
       </div>
     </div>
@@ -311,7 +309,6 @@
        ========================================== -->
   <div id="stage-wrapper">
     <div id="slide-stage">
-      <!-- Transparent Canvas Overlay for Real-time Teacher Whiteboard -->
       <canvas id="whiteboard-canvas"></canvas>
 
       <!-- SLIDE 1: 표지 및 학습 목표 -->
@@ -322,7 +319,7 @@
               <span class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-black text-xs">물리 · 통합과학2</span>
               <span class="text-sm font-bold text-slate-600">Ⅲ. 과학과 미래 사회 | 2. 과학 기술의 발전과 쟁점</span>
             </div>
-            <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">4차시 · 교과서 p.126~131</span>
+            <span id="lesson-id-badge" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">4차시 · 교과서 p.126~131</span>
           </div>
 
           <div class="mt-6 bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-3xl p-8 shadow-xl">
@@ -355,7 +352,7 @@
             <div>
               <div class="text-xs font-bold text-indigo-600">PART 02</div>
               <div class="font-extrabold text-slate-800">인공지능과 로봇 · 유용성과 한계</div>
-              <div class="text-xs text-slate-500 mt-0.5">총 58개 핵심 빈칸 완성</div>
+              <div class="text-xs text-slate-500 mt-0.5">총 58개 핵심 빈칸 & 오답노트</div>
             </div>
             <span class="text-2xl">🤖</span>
           </div>
@@ -370,7 +367,7 @@
         </div>
       </section>
 
-      <!-- SLIDE 2: ① 과학 기술의 발전 (산업 시대 vs 지능정보화 시대) -->
+      <!-- SLIDE 2: ① 과학 기술의 발전 -->
       <section class="slide-page" data-slide="1">
         <div>
           <div class="flex items-center justify-between pb-3 border-b border-slate-200">
@@ -379,45 +376,35 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <!-- (1) 산업 시대 -->
             <div class="rounded-2xl border-2 border-amber-200 bg-amber-50/60 p-6 flex flex-col justify-between">
               <div>
                 <span class="inline-block px-3 py-1 rounded-full bg-amber-200 text-amber-900 font-extrabold text-xs mb-3">과거 ~ 산업화</span>
                 <h3 class="text-xl font-black text-slate-900 mb-4">(1) 산업 시대 과학 기술 발전 방향</h3>
                 <p class="text-base md:text-lg leading-loose font-medium text-slate-800 bg-white p-5 rounded-xl border border-amber-200 shadow-sm">
-                  <span class="blank-slot" data-id="1" data-group="ind-resource" data-ans="지하자원" data-alt="지하 자원,광물자원"></span>이나
-                  <span class="blank-slot" data-id="2" data-group="ind-resource" data-ans="천연자원" data-alt="천연 자원,자연자원"></span>을 채취하여
-                  <span class="blank-slot" data-id="3" data-ans="물질" data-alt="원료,소재"></span>을 추출하고 이를 활용하는
-                  <span class="blank-slot" data-id="4" data-ans="물품" data-alt="제품,상품,물건"></span> 제조 기술로 발전
+                  <span class="blank-slot" data-id="1" data-slide="1" data-group="ind-resource" data-ans="지하자원" data-alt="지하 자원,광물자원"></span>이나
+                  <span class="blank-slot" data-id="2" data-slide="1" data-group="ind-resource" data-ans="천연자원" data-alt="천연 자원,자연자원"></span>을 채취하여
+                  <span class="blank-slot" data-id="3" data-slide="1" data-ans="물질" data-alt="원료,소재"></span>을 추출하고 이를 활용하는
+                  <span class="blank-slot" data-id="4" data-slide="1" data-ans="물품" data-alt="제품,상품,물건"></span> 제조 기술로 발전
                 </p>
               </div>
               <div class="mt-5 flex items-center justify-between text-xs font-bold text-amber-900 bg-amber-100/80 px-4 py-3 rounded-xl">
-                <span>⛏️ 자원 채취</span>
-                <span>→</span>
-                <span>🧪 물질 추출</span>
-                <span>→</span>
-                <span>🏭 물품 제조</span>
+                <span>⛏️ 자원 채취</span><span>→</span><span>🧪 물질 추출</span><span>→</span><span>🏭 물품 제조</span>
               </div>
             </div>
 
-            <!-- (2) 지능정보화 시대 -->
             <div class="rounded-2xl border-2 border-indigo-200 bg-indigo-50/60 p-6 flex flex-col justify-between">
               <div>
                 <span class="inline-block px-3 py-1 rounded-full bg-indigo-200 text-indigo-900 font-extrabold text-xs mb-3">현재 ~ 미래 사회</span>
                 <h3 class="text-xl font-black text-slate-900 mb-4">(2) 지능정보화 시대 과학 기술 발전 방향</h3>
                 <p class="text-base md:text-lg leading-loose font-medium text-slate-800 bg-white p-5 rounded-xl border border-indigo-200 shadow-sm">
                   인간과 자연에 관한
-                  <span class="blank-slot" data-id="5" data-ans="데이터" data-alt="빅데이터,자료"></span>에서
-                  <span class="blank-slot" data-id="6" data-ans="정보" data-alt="지식,유용한정보"></span>를 추출하고 이를 활용하는
-                  <span class="blank-slot" data-id="7" data-ans="인공지능" data-alt="AI,인공 지능"></span> 기술로 발전
+                  <span class="blank-slot" data-id="5" data-slide="1" data-ans="데이터" data-alt="빅데이터,자료"></span>에서
+                  <span class="blank-slot" data-id="6" data-slide="1" data-ans="정보" data-alt="지식,유용한정보"></span>를 추출하고 이를 활용하는
+                  <span class="blank-slot" data-id="7" data-slide="1" data-ans="인공지능" data-alt="AI,인공 지능"></span> 기술로 발전
                 </p>
               </div>
               <div class="mt-5 flex items-center justify-between text-xs font-bold text-indigo-900 bg-indigo-100/80 px-4 py-3 rounded-xl">
-                <span>📊 데이터 축적</span>
-                <span>→</span>
-                <span>💡 정보 추출</span>
-                <span>→</span>
-                <span>🧠 인공지능 기술</span>
+                <span>📊 데이터 축적</span><span>→</span><span>💡 정보 추출</span><span>→</span><span>🧠 인공지능 기술</span>
               </div>
             </div>
           </div>
@@ -429,7 +416,7 @@
         </div>
       </section>
 
-      <!-- SLIDE 3: 2. 사물 인터넷 기술 & 실시간 제어 원리 -->
+      <!-- SLIDE 3: 2. 사물 인터넷 기술 -->
       <section class="slide-page" data-slide="2">
         <div>
           <div class="flex items-center justify-between pb-3 border-b border-slate-200">
@@ -442,24 +429,23 @@
             <div class="flex items-start gap-2 text-base md:text-lg leading-loose">
               <span class="font-black text-indigo-600 mt-1">①</span>
               <p>
-                사물에 <span class="blank-slot" data-id="8" data-group="iot-parts" data-ans="센서" data-alt="감지기"></span>,
-                <span class="blank-slot" data-id="9" data-group="iot-parts" data-ans="통신 기능" data-alt="통신기능,통신,네트워크기능"></span>,
-                <span class="blank-slot" data-id="10" data-group="iot-parts" data-ans="소프트웨어" data-alt="SW,프로그램"></span> 내장 <span class="text-xs text-slate-400 font-semibold">(※ 3가지 순서 무관)</span>
+                사물에 <span class="blank-slot" data-id="8" data-slide="2" data-group="iot-parts" data-ans="센서" data-alt="감지기"></span>,
+                <span class="blank-slot" data-id="9" data-slide="2" data-group="iot-parts" data-ans="통신 기능" data-alt="통신기능,통신,네트워크기능"></span>,
+                <span class="blank-slot" data-id="10" data-slide="2" data-group="iot-parts" data-ans="소프트웨어" data-alt="SW,프로그램"></span> 내장 <span class="text-xs text-slate-400 font-semibold">(※ 3가지 순서 무관)</span>
               </p>
             </div>
             <div class="flex items-start gap-2 text-base md:text-lg leading-loose">
               <span class="font-black text-indigo-600 mt-1">②</span>
               <p>
-                <span class="blank-slot" data-id="11" data-ans="인터넷" data-alt="네트워크,통신망"></span>에 연결된 사물과 주변 환경의
-                <span class="blank-slot" data-id="12" data-ans="데이터" data-alt="정보,자료"></span>를 실시간으로 주고받아 사용자가
-                <span class="blank-slot" data-id="13" data-ans="원격" data-alt="멀리서,비대면"></span>으로 사물의
-                <span class="blank-slot" data-id="14" data-group="iot-act" data-ans="상태 파악" data-alt="상태파악,상태확인,모니터링"></span> 및
-                <span class="blank-slot" data-id="15" data-group="iot-act" data-ans="제어" data-alt="조작,조절,통제,관리"></span>
+                <span class="blank-slot" data-id="11" data-slide="2" data-ans="인터넷" data-alt="네트워크,통신망"></span>에 연결된 사물과 주변 환경의
+                <span class="blank-slot" data-id="12" data-slide="2" data-ans="데이터" data-alt="정보,자료"></span>를 실시간으로 주고받아 사용자가
+                <span class="blank-slot" data-id="13" data-slide="2" data-ans="원격" data-alt="멀리서,비대면"></span>으로 사물의
+                <span class="blank-slot" data-id="14" data-slide="2" data-group="iot-act" data-ans="상태 파악" data-alt="상태파악,상태확인,모니터링"></span> 및
+                <span class="blank-slot" data-id="15" data-slide="2" data-group="iot-act" data-ans="제어" data-alt="조작,조절,통제,관리"></span>
               </p>
             </div>
           </div>
 
-          <!-- Interactive IoT Architecture Visualizer -->
           <div class="mt-5 bg-slate-900 text-white rounded-2xl p-5">
             <div class="flex items-center justify-between mb-3">
               <span class="text-xs font-extrabold text-amber-400 uppercase tracking-wider">⚡ 사물 인터넷 작동 3단계 시뮬레이터 (단계를 클릭해 보세요)</span>
@@ -491,7 +477,7 @@
         </div>
       </section>
 
-      <!-- SLIDE 4: (2) 사물 인터넷 기술 활용 분야 (7대 스마트 분야) -->
+      <!-- SLIDE 4: (2) 사물 인터넷 기술 활용 분야 -->
       <section class="slide-page" data-slide="3">
         <div>
           <div class="flex items-center justify-between pb-3 border-b border-slate-200">
@@ -532,8 +518,8 @@
                   <tr onclick="selectSmartDomain('logi')" class="hover:bg-indigo-50/70 cursor-pointer">
                     <td class="py-2 px-3 font-extrabold text-purple-700 bg-purple-50/50">🚚 스마트 물류</td>
                     <td class="py-2 px-3">
-                      <span class="blank-slot" data-id="16" data-ans="운송" data-alt="배송,배달,화물"></span> 차량의 위치를 실시간으로 추적하고 소비자의 주문 유형과
-                      <span class="blank-slot" data-id="17" data-ans="재고" data-alt="상품재고,창고재고"></span> 물량 파악
+                      <span class="blank-slot" data-id="16" data-slide="3" data-ans="운송" data-alt="배송,배달,화물"></span> 차량의 위치를 실시간으로 추적하고 소비자의 주문 유형과
+                      <span class="blank-slot" data-id="17" data-slide="3" data-ans="재고" data-alt="상품재고,창고재고"></span> 물량 파악
                     </td>
                   </tr>
                   <tr onclick="selectSmartDomain('factory')" class="hover:bg-indigo-50/70 cursor-pointer">
@@ -544,7 +530,6 @@
               </table>
             </div>
 
-            <!-- Interactive Domain Inspector Card -->
             <div class="lg:col-span-4 bg-slate-900 text-white rounded-2xl p-5 flex flex-col justify-between">
               <div>
                 <span class="text-[11px] font-extrabold text-amber-400 uppercase">IoT 실시간 흐름 분석</span>
@@ -580,48 +565,46 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-            <!-- (1) 인공지능 기술 -->
             <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
               <h3 class="text-lg font-black text-indigo-900">(1) 인공지능 기술</h3>
               <p class="text-sm md:text-base font-semibold leading-relaxed">
-                ① <span class="blank-slot" data-id="18" data-ans="빅데이터" data-alt="빅 데이터,방대한데이터,대용량데이터"></span>를 학습하고 분석하는 기술을 바탕으로 다양하게 활용
+                ① <span class="blank-slot" data-id="18" data-slide="4" data-ans="빅데이터" data-alt="빅 데이터,방대한데이터,대용량데이터"></span>를 학습하고 분석하는 기술을 바탕으로 다양하게 활용
               </p>
               <div class="bg-white rounded-xl p-4 border border-slate-200 space-y-2.5 text-sm leading-relaxed">
                 <div class="text-xs font-extrabold text-indigo-600">대표 활용 사례 (ex)</div>
                 <p>• 사람의 말, 글, 그림 등을 입력하여 다양한 형식의
-                  <span class="blank-slot" data-id="19" data-group="ai-gen" data-ans="문서" data-alt="글,텍스트"></span>,
-                  <span class="blank-slot" data-id="20" data-group="ai-gen" data-ans="음악" data-alt="노래,오디오,소리"></span>,
-                  <span class="blank-slot" data-id="21" data-group="ai-gen" data-ans="그림" data-alt="이미지,사진,영상"></span> 등을 제작
+                  <span class="blank-slot" data-id="19" data-slide="4" data-group="ai-gen" data-ans="문서" data-alt="글,텍스트"></span>,
+                  <span class="blank-slot" data-id="20" data-slide="4" data-group="ai-gen" data-ans="음악" data-alt="노래,오디오,소리"></span>,
+                  <span class="blank-slot" data-id="21" data-slide="4" data-group="ai-gen" data-ans="그림" data-alt="이미지,사진,영상"></span> 등을 제작
                 </p>
                 <p>• 기존 데이터의 추이를
-                  <span class="blank-slot" data-id="22" data-ans="분석" data-alt="파악,학습"></span>하여 미래 변화
-                  <span class="blank-slot" data-id="23" data-ans="예측" data-alt="예상,전망"></span>
+                  <span class="blank-slot" data-id="22" data-slide="4" data-ans="분석" data-alt="파악,학습"></span>하여 미래 변화
+                  <span class="blank-slot" data-id="23" data-slide="4" data-ans="예측" data-alt="예상,전망"></span>
                 </p>
                 <p>• 주변 상황을 인식하고 스스로 구동 장치를
-                  <span class="blank-slot" data-id="24" data-ans="제어" data-alt="조작,조절"></span>하는
-                  <span class="blank-slot" data-id="25" data-ans="자율주행" data-alt="자율 주행,무인자율주행"></span> 자동차 개발
+                  <span class="blank-slot" data-id="24" data-slide="4" data-ans="제어" data-alt="조작,조절"></span>하는
+                  <span class="blank-slot" data-id="25" data-slide="4" data-ans="자율주행" data-alt="자율 주행,무인자율주행"></span> 자동차 개발
                 </p>
               </div>
             </div>
 
-            <!-- (2) 인공지능 로봇 -->
             <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
               <h3 class="text-lg font-black text-emerald-900">(2) 인공지능 로봇</h3>
               <p class="text-sm md:text-base font-semibold leading-relaxed">
-                ① <span class="blank-slot" data-id="26" data-group="robot-core" data-ans="인공지능 기술" data-alt="인공지능기술,인공지능,AI기술,AI"></span>,
-                <span class="blank-slot" data-id="27" data-group="robot-core" data-ans="반도체" data-alt="칩,인공지능반도체"></span>,
-                <span class="blank-slot" data-id="28" data-group="robot-core" data-ans="센서" data-alt="감지기"></span> 등을 활용하여 자율적으로 행동하는 로봇
+                ① <span class="blank-slot" data-id="26" data-slide="4" data-group="robot-core" data-ans="인공지능 기술" data-alt="인공지능기술,인공지능,AI기술,AI"></span>,
+                <span class="blank-slot" data-id="27" data-slide="4" data-group="robot-core" data-ans="반도체" data-alt="칩,인공지능반도체"></span>,
+                <span class="blank-slot" data-id="28" data-slide="4" data-group="robot-core" data-ans="센서" data-alt="감지기"></span> 등을 활용하여 자율적으로 행동하는 로봇
               </p>
               <div class="bg-white rounded-xl p-4 border border-slate-200 space-y-2.5 text-sm leading-relaxed">
                 <div class="text-xs font-extrabold text-emerald-700">특징 및 활용 분야 (ex)</div>
                 <p>• 주변 상황을 인식하여
-                  <span class="blank-slot" data-id="29" data-ans="자율적" data-alt="스스로,자동"></span>으로 작업을 수행하는 로봇 : 인간과
-                  <span class="blank-slot" data-id="30" data-ans="상호작용" data-alt="상호 작용,소통,협업,협력"></span>하여 작업 보조
+                  <span class="blank-slot" data-id="29" data-slide="4" data-ans="자율적" data-alt="스스로,자동"></span>으로 작업을 수행하는 로봇 : 인간과
+                  <span class="blank-slot" data-id="30" data-slide="4" data-ans="상호작용" data-alt="상호 작용,소통,협업,협력"></span>하여 작업 보조
                 </p>
                 <p>• 작업 환경과 목표에 따라
-                  <span class="blank-slot" data-id="31" data-group="robot-form" data-ans="크기" data-alt="규모,사이즈"></span>,
-                  <span class="blank-slot" data-id="32" data-group="robot-form" data-ans="형태" data-alt="모양,외형,모습"></span>,
-                  <span class="blank-slot" data-id="33" data-group="robot-form" data-ans="작동 방식" data-alt="작동방식,구동방식,움직임"></span>을 달리하여 일상생활뿐만 아니라 문화·예술, 산업 현장, 우주 탐사 등 다양한 분야에서 활용
+                  <span class="blank-slot" data-id="31" data-slide="4" data-group="robot-form" data-ans="크기" data-alt="규모,사이즈"></span>,
+                  <span class="blank-slot" data-id="32" data-slide="4" data-group="robot-form" data-ans="형태" data-alt="모양,외형,모습"></span>,
+                  <span class="blank-slot" data-id="33" data-slide="4" data-group="robot-form" data-ans="작동 방식" data-alt="작동방식,구동방식,움직임"></span>을 달리하여 일상생활뿐만 아니라 문화·예술, 산업 현장, 우주 탐사 등 다양한 분야에서 활용
                 </p>
               </div>
             </div>
@@ -634,7 +617,7 @@
         </div>
       </section>
 
-      <!-- SLIDE 6: ③ 과학 기술의 유용성 (5대 분야 표) -->
+      <!-- SLIDE 6: ③ 과학 기술의 유용성 -->
       <section class="slide-page" data-slide="5">
         <div>
           <div class="flex items-center justify-between pb-2 border-b border-slate-200">
@@ -644,11 +627,11 @@
 
           <div class="mt-2.5 p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs md:text-sm font-semibold">
             • 미래 사회의 다양한 분야에서 활용될 과학 기술(ex, 순서 무관):
-            <span class="blank-slot" data-id="34" data-group="tech5" data-ans="사물 인터넷" data-alt="사물인터넷,IoT"></span>,
-            <span class="blank-slot" data-id="35" data-group="tech5" data-ans="빅데이터" data-alt="빅 데이터"></span>,
-            <span class="blank-slot" data-id="36" data-group="tech5" data-ans="인공지능" data-alt="인공 지능,AI"></span>,
-            <span class="blank-slot" data-id="37" data-group="tech5" data-ans="로봇" data-alt="로봇기술,인공지능로봇"></span>,
-            <span class="blank-slot" data-id="38" data-group="tech5" data-ans="가상 현실" data-alt="가상현실,VR"></span>
+            <span class="blank-slot" data-id="34" data-slide="5" data-group="tech5" data-ans="사물 인터넷" data-alt="사물인터넷,IoT"></span>,
+            <span class="blank-slot" data-id="35" data-slide="5" data-group="tech5" data-ans="빅데이터" data-alt="빅 데이터"></span>,
+            <span class="blank-slot" data-id="36" data-slide="5" data-group="tech5" data-ans="인공지능" data-alt="인공 지능,AI"></span>,
+            <span class="blank-slot" data-id="37" data-slide="5" data-group="tech5" data-ans="로봇" data-alt="로봇기술,인공지능로봇"></span>,
+            <span class="blank-slot" data-id="38" data-slide="5" data-group="tech5" data-ans="가상 현실" data-alt="가상현실,VR"></span>
           </div>
 
           <div class="mt-3 overflow-hidden rounded-2xl border border-slate-200">
@@ -663,7 +646,7 @@
                 <tr>
                   <td class="py-2 px-3 font-extrabold bg-slate-50">🚗 교통 분야</td>
                   <td class="py-2 px-3">
-                    (드론 택시), (<span class="blank-slot" data-id="39" data-ans="무인 자율주행 자동차" data-alt="무인자율주행자동차,자율주행자동차,자율주행차,무인자동차"></span>)
+                    (드론 택시), (<span class="blank-slot" data-id="39" data-slide="5" data-ans="무인 자율주행 자동차" data-alt="무인자율주행자동차,자율주행자동차,자율주행차,무인자동차"></span>)
                     <span class="font-black text-indigo-600 mx-1">←</span>
                     (인공지능), (로봇 기술)
                   </td>
@@ -671,15 +654,15 @@
                 <tr>
                   <td class="py-2 px-3 font-extrabold bg-slate-50">🎓 교육 분야</td>
                   <td class="py-2 px-3">
-                    (인공지능), (<span class="blank-slot" data-id="40" data-ans="가상 현실 기술" data-alt="가상현실기술,가상현실,VR기술,VR"></span>)
+                    (인공지능), (<span class="blank-slot" data-id="40" data-slide="5" data-ans="가상 현실 기술" data-alt="가상현실기술,가상현실,VR기술,VR"></span>)
                     <span class="font-black text-indigo-600 mx-1">→</span>
-                    (<span class="blank-slot" data-id="41" data-ans="수업 활동" data-alt="수업활동,수업,교육활동,학습활동"></span>) 혁신
+                    (<span class="blank-slot" data-id="41" data-slide="5" data-ans="수업 활동" data-alt="수업활동,수업,교육활동,학습활동"></span>) 혁신
                   </td>
                 </tr>
                 <tr>
                   <td class="py-2 px-3 font-extrabold bg-slate-50">🩺 의료 분야</td>
                   <td class="py-2 px-3">
-                    질병을 (<span class="blank-slot" data-id="42" data-group="med-care" data-ans="진단" data-alt="검사,판별"></span>)하고 (<span class="blank-slot" data-id="43" data-group="med-care" data-ans="치료" data-alt="처방,치유"></span>)
+                    질병을 (<span class="blank-slot" data-id="42" data-slide="5" data-group="med-care" data-ans="진단" data-alt="검사,판별"></span>)하고 (<span class="blank-slot" data-id="43" data-slide="5" data-group="med-care" data-ans="치료" data-alt="처방,치유"></span>)
                     <span class="font-black text-indigo-600 mx-1">←</span>
                     (사물 인터넷)과 (빅데이터 기술)로 의료 데이터를 분석
                   </td>
@@ -687,7 +670,7 @@
                 <tr>
                   <td class="py-2 px-3 font-extrabold bg-slate-50">🌿 환경 분야</td>
                   <td class="py-2 px-3">
-                    (<span class="blank-slot" data-id="44" data-group="env-tech" data-ans="핵융합" data-alt="핵융합발전,핵융합기술"></span>), (<span class="blank-slot" data-id="45" data-group="env-tech" data-ans="우주 태양광 발전" data-alt="우주태양광발전,우주태양광"></span>)
+                    (<span class="blank-slot" data-id="44" data-slide="5" data-group="env-tech" data-ans="핵융합" data-alt="핵융합발전,핵융합기술"></span>), (<span class="blank-slot" data-id="45" data-slide="5" data-group="env-tech" data-ans="우주 태양광 발전" data-alt="우주태양광발전,우주태양광"></span>)
                     <span class="font-black text-indigo-600 mx-1">→</span>
                     (자연환경) 보존
                   </td>
@@ -695,7 +678,7 @@
                 <tr>
                   <td class="py-2 px-3 font-extrabold bg-slate-50">🚀 우주 분야</td>
                   <td class="py-2 px-3">
-                    달과 화성에서 (<span class="blank-slot" data-id="46" data-ans="자원 개발" data-alt="자원개발,자원채취,자원탐사"></span>)
+                    달과 화성에서 (<span class="blank-slot" data-id="46" data-slide="5" data-ans="자원 개발" data-alt="자원개발,자원채취,자원탐사"></span>)
                     <span class="font-black text-indigo-600 mx-1">←</span>
                     (인공지능)과 (로봇 기술)을 활용한 우주 탐사
                   </td>
@@ -720,47 +703,45 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mt-4">
-            <!-- (2) 과학 기술의 한계 -->
             <div class="md:col-span-7 bg-rose-50/60 border-2 border-rose-200 rounded-2xl p-5 space-y-2.5">
               <h3 class="text-lg font-black text-rose-900 flex items-center gap-2">⚠️ (2) 과학 기술의 한계 (5가지)</h3>
               <ul class="space-y-2 text-sm md:text-base font-medium text-slate-800">
                 <li class="p-2.5 rounded-xl bg-white border border-rose-100 leading-relaxed">
-                  ① 예상하지 못한 <span class="blank-slot" data-id="47" data-group="limit-waste" data-ans="오염" data-alt="환경오염,공해"></span>과
-                  <span class="blank-slot" data-id="48" data-group="limit-waste" data-ans="폐기물" data-alt="쓰레기,폐기 물질"></span>
+                  ① 예상하지 못한 <span class="blank-slot" data-id="47" data-slide="6" data-group="limit-waste" data-ans="오염" data-alt="환경오염,공해"></span>과
+                  <span class="blank-slot" data-id="48" data-slide="6" data-group="limit-waste" data-ans="폐기물" data-alt="쓰레기,폐기 물질"></span>
                 </li>
                 <li class="p-2.5 rounded-xl bg-white border border-rose-100 leading-relaxed">
-                  ② 취약 계층 등의 <span class="blank-slot" data-id="49" data-ans="부적응성" data-alt="부적응,소외,적응어려움"></span>으로 인한
-                  <span class="blank-slot" data-id="50" data-ans="사회적 불평등" data-alt="사회적불평등,불평등,정보격차,양극화"></span>
+                  ② 취약 계층 등의 <span class="blank-slot" data-id="49" data-slide="6" data-ans="부적응성" data-alt="부적응,소외,적응어려움"></span>으로 인한
+                  <span class="blank-slot" data-id="50" data-slide="6" data-ans="사회적 불평등" data-alt="사회적불평등,불평등,정보격차,양극화"></span>
                 </li>
                 <li class="p-2.5 rounded-xl bg-white border border-rose-100 leading-relaxed">
-                  ③ 지속적 <span class="blank-slot" data-id="51" data-ans="학습" data-alt="배움,교육,공부"></span>의 어려움
+                  ③ 지속적 <span class="blank-slot" data-id="51" data-slide="6" data-ans="학습" data-alt="배움,교육,공부"></span>의 어려움
                 </li>
                 <li class="p-2.5 rounded-xl bg-white border border-rose-100 leading-relaxed">
-                  ④ 과학 기술 <span class="blank-slot" data-id="52" data-ans="의존" data-alt="과몰입,맹신,의존성"></span>으로 인간의 삶에 필요한 필수 능력 약화
+                  ④ 과학 기술 <span class="blank-slot" data-id="52" data-slide="6" data-ans="의존" data-alt="과몰입,맹신,의존성"></span>으로 인간의 삶에 필요한 필수 능력 약화
                 </li>
                 <li class="p-2.5 rounded-xl bg-white border border-rose-100 leading-relaxed">
-                  ⑤ 방대한 양의 개인 데이터 수집 및 사용으로 <span class="blank-slot" data-id="53" data-group="limit-sec" data-ans="개인 정보 보호" data-alt="개인정보보호,개인정보,프라이버시,사생활보호"></span> 및
-                  <span class="blank-slot" data-id="54" data-group="limit-sec" data-ans="보안" data-alt="정보보안,해킹,안전"></span>에 관한 문제 발생
+                  ⑤ 방대한 양의 개인 데이터 수집 및 사용으로 <span class="blank-slot" data-id="53" data-slide="6" data-group="limit-sec" data-ans="개인 정보 보호" data-alt="개인정보보호,개인정보,프라이버시,사생활보호"></span> 및
+                  <span class="blank-slot" data-id="54" data-slide="6" data-group="limit-sec" data-ans="보안" data-alt="정보보안,해킹,안전"></span>에 관한 문제 발생
                 </li>
               </ul>
             </div>
 
-            <!-- (3) 준비하는 자세 -->
             <div class="md:col-span-5 bg-emerald-50/70 border-2 border-emerald-200 rounded-2xl p-5 flex flex-col justify-between">
               <div class="space-y-3">
                 <h3 class="text-lg font-black text-emerald-900 flex items-center gap-2">🧭 (3) 과학 기술의 발전을 준비하는 자세</h3>
                 <div class="space-y-2.5 text-sm md:text-base font-semibold text-slate-800">
                   <div class="p-3 rounded-xl bg-white border border-emerald-200 leading-relaxed">
                     <div class="text-xs font-extrabold text-emerald-700 mb-1">자세 ①</div>
-                    과학 기술의 한계 <span class="blank-slot" data-id="55" data-ans="예측" data-alt="예상,파악,대비"></span>
+                    과학 기술의 한계 <span class="blank-slot" data-id="55" data-slide="6" data-ans="예측" data-alt="예상,파악,대비"></span>
                   </div>
                   <div class="p-3 rounded-xl bg-white border border-emerald-200 leading-relaxed">
                     <div class="text-xs font-extrabold text-emerald-700 mb-1">자세 ②</div>
-                    과학 기술의 발전이 인간의 삶과 환경에 미치는 영향에 <span class="blank-slot" data-id="56" data-ans="지속적인 관심" data-alt="지속적인관심,관심,꾸준한관심,지속적관심"></span>
+                    과학 기술의 발전이 인간의 삶과 환경에 미치는 영향에 <span class="blank-slot" data-id="56" data-slide="6" data-ans="지속적인 관심" data-alt="지속적인관심,관심,꾸준한관심,지속적관심"></span>
                   </div>
                   <div class="p-3 rounded-xl bg-white border border-emerald-200 leading-relaxed">
                     <div class="text-xs font-extrabold text-emerald-700 mb-1">자세 ③</div>
-                    가치 있는 해결책을 찾기 위해 <span class="blank-slot" data-id="57" data-ans="협력" data-alt="협동,협업,연대"></span>하고 소통하는 <span class="blank-slot" data-id="58" data-ans="태도" data-alt="자세,마음가짐"></span>
+                    가치 있는 해결책을 찾기 위해 <span class="blank-slot" data-id="57" data-slide="6" data-ans="협력" data-alt="협동,협업,연대"></span>하고 소통하는 <span class="blank-slot" data-id="58" data-slide="6" data-ans="태도" data-alt="자세,마음가짐"></span>
                   </div>
                 </div>
               </div>
@@ -793,7 +774,6 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-            <!-- Quiz 1 -->
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-0">
               <div>
                 <div class="flex items-center justify-between">
@@ -811,7 +791,6 @@
               <div id="quiz-fb-0" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
             </div>
 
-            <!-- Quiz 2 -->
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-1">
               <div>
                 <div class="flex items-center justify-between">
@@ -853,7 +832,6 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-            <!-- Quiz 3 -->
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-2">
               <div>
                 <div class="flex items-center justify-between">
@@ -871,7 +849,6 @@
               <div id="quiz-fb-2" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
             </div>
 
-            <!-- Quiz 4 -->
             <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-3">
               <div>
                 <div class="flex items-center justify-between">
@@ -897,11 +874,11 @@
         </div>
       </section>
 
-      <!-- SLIDE 10: 마무리 개념 확인 퀴즈 (Q5) & 일괄 채점 / 재도전 / 결과 제출 카드 -->
+      <!-- SLIDE 10: 마무리 개념 확인 퀴즈 (Q5) & 채점 / 오답노트 / 제출 카드 -->
       <section class="slide-page" data-slide="9">
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
-            <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (3/3) & 채점·제출</h2>
+            <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (3/3) & 오답노트·제출</h2>
             <div class="flex items-center gap-2">
               <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
                 선택 현황: <strong class="quiz-selected-counter">0</strong> / 5문항 선택됨
@@ -913,7 +890,6 @@
           </div>
 
           <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mt-4">
-            <!-- Quiz 5 -->
             <div class="md:col-span-7 rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-4">
               <div>
                 <div class="flex items-center justify-between">
@@ -931,15 +907,14 @@
               <div id="quiz-fb-4" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
             </div>
 
-            <!-- Final Grading, Retry & Submission Card -->
+            <!-- Final Grading, Wrong Note & Submission Card -->
             <div class="md:col-span-5 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-5 flex flex-col justify-between">
               <div>
                 <div class="flex items-center justify-between">
-                  <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-extrabold">퀴즈 채점 & 학습 리포트</span>
+                  <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-extrabold">퀴즈 채점 & 오답노트 리포트</span>
                   <span id="quiz-Retry-status-pill" class="text-[11px] font-bold text-amber-300">채점 대기 중</span>
                 </div>
 
-                <!-- 1~5번 문항 미니 상태표 (클릭 시 해당 슬라이드로 이동) -->
                 <div class="mt-3 p-3 rounded-xl bg-white/10 border border-white/10">
                   <div class="text-[11px] text-slate-300 font-bold mb-2">문항별 상태 (클릭하면 해당 문제로 이동합니다)</div>
                   <div class="grid grid-cols-5 gap-1.5 text-center text-xs font-extrabold">
@@ -967,13 +942,16 @@
               </div>
 
               <div class="space-y-2 mt-3">
-                <button id="grade-quiz-btn" type="button" onclick="gradeAndSubmitQuiz()" class="w-full py-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-black text-sm shadow-lg transition cursor-pointer">
-                  ✅ 마무리 퀴즈 채점 및 제출하기
+                <button id="grade-quiz-btn" type="button" onclick="gradeAndSubmitQuiz()" class="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-black text-xs shadow-lg transition cursor-pointer">
+                  ✅ 1단계: 마무리 퀴즈 채점 및 제출하기
+                </button>
+                <button type="button" onclick="openStudentWrongNoteModal()" class="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-lg transition cursor-pointer">
+                  📓 2단계: 내 오답 다시 보기 & 오답노트 작성하기
                 </button>
                 <button id="student-final-submit-btn" type="button" onclick="submitStudentWork(true)" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg transition cursor-pointer">
-                  📤 전체 작성 내용 선생님께 최종 전송하기
+                  📤 3단계: 전체 작성 내용 선생님께 최종 전송하기
                 </button>
-                <button id="teacher-final-stat-btn" type="button" onclick="openQuizStatsModal()" class="hidden w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm shadow-lg transition cursor-pointer">
+                <button id="teacher-final-stat-btn" type="button" onclick="openQuizStatsModal()" class="hidden w-full py-3 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-black text-xs shadow-lg transition cursor-pointer">
                   🏆 [교사용] 문항별 정답자 수 & 최다 정답 학생 공개
                 </button>
                 <p id="submit-confirm-msg" class="text-[11px] text-center text-emerald-300 hidden">✅ 선생님 화면으로 채점 결과가 전송되었습니다!</p>
@@ -983,10 +961,73 @@
         </div>
 
         <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex justify-between">
-          <span>👏 <strong>[채점 및 제출하기]</strong> 후 틀린 문제는 번호를 눌러 이동한 뒤 힌트를 참고해 다시 풀어보세요!</span>
+          <span>👏 <strong>[📓 내 오답 다시 보기 & 오답노트 작성하기]</strong>를 누르면 틀린 문제 페이지로 바로 이동해 복습하고 선생님 피드백도 받을 수 있습니다!</span>
           <span class="font-bold">Slide 10 / 10</span>
         </div>
       </section>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       STUDENT WRONG-ANSWER NOTE & TEACHER FEEDBACK MODAL
+       ========================================== -->
+  <div id="student-wrong-note-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden items-center justify-center p-4 selectable-text">
+    <div class="bg-white text-slate-900 rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+      <div class="p-5 bg-slate-900 text-white flex items-center justify-between">
+        <div>
+          <span class="px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-extrabold text-xs">자기주도 오답 정복 & 교사 피드백</span>
+          <h2 class="text-xl font-black mt-1">📓 나의 오답 다시 보기 & 오답노트</h2>
+        </div>
+        <button type="button" onclick="closeStudentWrongNoteModal()" class="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs cursor-pointer">닫기 ✕</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-6 flex-1">
+        <!-- Teacher Feedback Arrival Box -->
+        <div id="student-feedback-view-box" class="p-4 rounded-2xl bg-indigo-50 border-2 border-indigo-200">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-extrabold text-indigo-700">💬 선생님께서 보내주신 피드백</span>
+            <span id="student-feedback-time" class="text-[11px] text-indigo-400 font-semibold">실시간 연동</span>
+          </div>
+          <p id="student-feedback-content" class="text-sm font-bold text-slate-800">
+            아직 도착한 피드백이 없습니다. 오답노트를 작성해 제출하면 선생님께서 확인 후 피드백을 보내주십니다!
+          </p>
+        </div>
+
+        <!-- Section 1: Wrong / Unfilled Blanks List with Jump-to-Slide Buttons -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-base font-black text-slate-900">1️⃣ 내가 아직 못 채웠거나 틀린 빈칸 목록</h3>
+            <span class="text-xs text-slate-500">버튼을 누르면 해당 슬라이드 페이지로 바로 이동해 다시 공부할 수 있습니다</span>
+          </div>
+          <div id="student-wrong-blanks-list" class="flex flex-wrap gap-2 p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- Section 2: Wrong Quiz Items & Wrong-Note Writing -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <h3 class="text-base font-black text-slate-900">2️⃣ 마무리 확인 퀴즈 오답 복습 및 오답노트 작성</h3>
+            <span class="text-xs font-bold text-rose-600">틀린 이유나 핵심 개념을 한 줄로 정리해 보세요</span>
+          </div>
+          <div id="student-wrong-quiz-list" class="space-y-3">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <!-- General Wrong-Note Summary Textarea -->
+        <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200">
+          <label class="block text-xs font-extrabold text-amber-900 mb-1.5">📝 오늘 틀렸던 개념 핵심 요약 노트 (선생님께 전송됩니다)</label>
+          <textarea id="student-general-wrong-note" rows="3" placeholder="예: 산업 시대는 물질 추출·물품 제조이고, 지능정보화 시대는 데이터에서 정보를 추출해 인공지능 기술로 발전한다는 점을 헷갈렸다. 사물 인터넷은 원격 제어가 핵심이다!" class="w-full p-3 rounded-xl bg-white border border-amber-300 text-xs md:text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-600"></textarea>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-100 border-t border-slate-200 flex items-center justify-between">
+        <span class="text-xs text-slate-600 font-semibold">작성 후 오른쪽 버튼을 누르면 선생님 대시보드와 구글 시트에 즉시 반영됩니다.</span>
+        <button type="button" onclick="saveAndSendWrongNote()" class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-lg cursor-pointer">
+          💾 오답노트 저장 및 선생님께 전송하기
+        </button>
+      </div>
     </div>
   </div>
 
@@ -1037,7 +1078,7 @@
   </div>
 
   <!-- ==========================================
-       STUDENT INVITE QR & URL MODAL (For Teacher)
+       STUDENT INVITE QR & URL MODAL
        ========================================== -->
   <div id="qr-invite-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-4 selectable-text">
     <div class="bg-white text-slate-900 rounded-3xl max-w-2xl w-full p-7 shadow-2xl border border-slate-200">
@@ -1051,7 +1092,7 @@
 
       <div id="local-file-warning" class="hidden mt-4 p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs leading-relaxed">
         ⚠️ <strong>주의: 현재 GitHub Pages 주소가 아닌 내 컴퓨터(또는 미리보기 창)에서 열려 있습니다!</strong><br>
-        학생 스마트폰으로 스캔하려면 아래 <strong>[배포된 수업 웹 주소]</strong> 칸에 선생님의 GitHub Pages 주소(예: <code>https://hemophilia13.github.io/science/lesson1.html</code>)를 입력하고 <strong>[QR 재생성]</strong>을 눌러주세요.
+        학생 스마트폰으로 스캔하려면 아래 <strong>[배포된 수업 웹 주소]</strong> 칸에 선생님의 GitHub Pages 주소를 입력하고 <strong>[QR 재생성]</strong>을 눌러주세요.
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mt-5 items-center">
@@ -1087,35 +1128,34 @@
             </div>
             <p id="copy-url-feedback" class="text-xs font-bold text-emerald-600 mt-1 hidden">✅ 학생 접속 주소가 복사되었습니다!</p>
           </div>
-
-          <div class="pt-2 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
-            <span>학생 화면이 어떻게 보이는지 바로 확인:</span>
-            <button type="button" onclick="closeQrInviteModal(); openStudentEntryModal();" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold cursor-pointer">이 화면에서 학생 모드 체험하기</button>
-          </div>
         </div>
       </div>
     </div>
   </div>
 
   <!-- ==========================================
-       TEACHER SUBMISSION & SYNC DASHBOARD MODAL
+       TEACHER INTEGRATED SUBMISSION & ANALYTICS DASHBOARD MODAL
        ========================================== -->
-  <div id="teacher-dashboard-modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm hidden items-center justify-center p-4 selectable-text">
-    <div class="bg-white text-slate-900 rounded-3xl max-w-5xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden">
-      <div class="p-5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
+  <div id="teacher-dashboard-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-3 md:p-5 selectable-text">
+    <div class="bg-white text-slate-900 rounded-3xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Top Header -->
+      <div class="p-4 md:p-5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
         <div>
-          <span class="text-xs font-bold text-emerald-400">실시간 학생 답안 수합 대시보드</span>
-          <h3 class="text-xl font-black">제출 학생 현황 (방 코드: <span id="dash-room-code" class="text-amber-400">SCI2026</span>)</h3>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-extrabold text-emerald-400">통합 학습 관리 & 다차원 분석 시스템</span>
+            <span class="px-2 py-0.5 rounded bg-slate-800 text-amber-300 text-xs font-mono">방: <span id="dash-room-code">SCI2026</span></span>
+          </div>
+          <h3 class="text-lg md:text-xl font-black mt-0.5">실시간 학생 답안 수합 · 오답노트 피드백 · 반별/문항별 대시보드</h3>
         </div>
-        <div class="flex items-center gap-2">
-          <button type="button" onclick="openQuizStatsModal()" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-extrabold transition cursor-pointer">
-            🏆 퀴즈 결과 & 최다 정답자 보기
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" onclick="fetchAllRecordsFromGoogleSheet()" class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition cursor-pointer" title="구글 시트에 저장된 이전 차시/반 데이터를 모두 불러와 분석합니다">
+            ☁️ 구글 시트 전체 차시 불러오기
           </button>
-          <button type="button" onclick="exportSubmissionsCSV()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition cursor-pointer">
+          <button type="button" onclick="exportSubmissionsCSV()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition cursor-pointer">
             📥 엑셀(CSV) 다운로드
           </button>
-          <button type="button" onclick="toggleGuideSection()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold transition cursor-pointer">
-            📖 구글 시트 자동저장 설정법
+          <button type="button" onclick="toggleGuideSection()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-extrabold transition cursor-pointer">
+            📖 구글 시트 설정법
           </button>
           <button type="button" onclick="closeTeacherDashboard()" class="px-3 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold cursor-pointer">
             닫기 ✕
@@ -1123,29 +1163,81 @@
         </div>
       </div>
 
+      <!-- Sub-Navigation Tabs & Filter Bar -->
+      <div class="px-5 py-3 bg-slate-100 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <button type="button" id="dash-tab-btn-table" onclick="switchDashboardTab('table')" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-extrabold shadow cursor-pointer">
+            📋 학생별 답안 수합 & 오답노트 피드백
+          </button>
+          <button type="button" id="dash-tab-btn-analytics" onclick="switchDashboardTab('analytics')" class="px-4 py-2 rounded-xl bg-white hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-extrabold cursor-pointer">
+            📈 다차원 분석 대시보드 (반별·수업별·문제별·학생별)
+          </button>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs">
+          <label class="font-bold text-slate-600">차시 필터:</label>
+          <select id="filter-lesson-select" onchange="refreshDashboardViews()" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-bold text-slate-800">
+            <option value="ALL">전체 수업 차시</option>
+          </select>
+          <label class="font-bold text-slate-600 ml-1">반 필터:</label>
+          <select id="filter-class-select" onchange="refreshDashboardViews()" class="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-bold text-slate-800">
+            <option value="ALL">전체 반</option>
+          </select>
+        </div>
+      </div>
+
       <!-- Optional Google Apps Script Setup Guide -->
       <div id="teacher-setup-guide" class="hidden bg-indigo-50 border-b border-indigo-200 p-5 text-xs space-y-3 overflow-y-auto max-h-96 selectable-text">
-        <div class="font-black text-sm text-indigo-950">📌 [선택 사항] 구글 스프레드시트로 학생 답안 영구 자동 저장하기</div>
+        <div class="font-black text-sm text-indigo-950">📌 구글 스프레드시트 연동 & 여러 차시 통합 관리 설정법</div>
         <div class="p-4 rounded-xl bg-white border border-indigo-200 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="font-extrabold text-indigo-900">1단계: 아래 초록색 [📋 코드 한 번에 복사하기] 버튼을 클릭하세요.</span>
-            <button type="button" onclick="copyAppsScriptCode()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer">
-              📋 코드 한 번에 복사하기
+            <span class="font-extrabold text-indigo-900">1단계: 아래 초록색 [📋 새 Apps Script 코드 복사하기] 버튼을 클릭하세요. (초시 정오·정복현황·오답노트·피드백·차시 통합 지원)</span>
+            <button type="button" onclick="copyAppsScriptCode()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition cursor-pointer">
+              📋 새 Apps Script 코드 복사하기
             </button>
           </div>
           <p id="gas-copy-feedback" class="text-emerald-700 bg-emerald-50 border border-emerald-200 p-2 rounded-lg font-extrabold hidden">
-            ✅ 코드가 복사되었습니다! 이제 구글 스프레드시트 [확장 프로그램] → [Apps Script] 창에 붙여넣기(Ctrl+V) 하세요.
+            ✅ 코드가 복사되었습니다! 구글 시트 [확장 프로그램] → [Apps Script]에 붙여넣고 [새 배포] 해주세요.
           </p>
           <textarea id="gas-script-textarea" readonly rows="6" onclick="this.focus();this.select();" class="w-full p-3 bg-slate-900 text-emerald-300 font-mono rounded-xl text-[11px] leading-relaxed focus:outline-none border-2 border-slate-700 cursor-text">function doPost(e) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = JSON.parse(e.postData.contents);
-  sheet.appendRow([new Date(), data.studentId, data.studentName, data.blankScore, data.quizScore, data.reflection, JSON.stringify(data.answers)]);
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["최근전송시각", "수업차시", "반", "학번", "이름", "빈칸점수(58)", "퀴즈초시점수(5)", "문항별초시정오(1~5번)", "오답정복현황", "틀린빈칸번호", "오답노트작성여부", "학생오답노트내용", "한줄성찰", "교사피드백", "원본JSON"]);
+  }
+  var values = sheet.getDataRange().getValues();
+  if (data.action === "TEACHER_FEEDBACK") {
+    for (var f = 1; f < values.length; f++) {
+      if (String(values[f][1]) === String(data.lessonId) && String(values[f][3]) === String(data.studentId)) {
+        sheet.getRange(f + 1, 14).setValue(data.teacherFeedback || "-");
+        try { var rawObj = JSON.parse(values[f][14] || "{}"); rawObj.teacherFeedback = data.teacherFeedback; sheet.getRange(f + 1, 15).setValue(JSON.stringify(rawObj)); } catch (err) {}
+        break;
+      }
+    }
+    return ContentService.createTextOutput("FEEDBACK_OK");
+  }
+  var rowData = [new Date().toLocaleString("ko-KR"), data.lessonId || "3-2-1 과학 기술과 미래 사회", data.classGroup || "미분류", data.studentId, data.studentName, data.blankScore + " / " + (data.totalBlanks || 58), data.quizInitialSubmitted ? (data.quizScore + " / 5") : "미채점", data.quizDetailText || "-", data.conquestText || "채점 전", data.wrongBlanksText || "없음", data.wrongNoteCount > 0 ? ("작성완료(" + data.wrongNoteCount + "건)") : "미작성", data.wrongNoteText || "-", data.reflection || "-", data.teacherFeedback || "-", JSON.stringify(data)];
+  var updated = false;
+  for (var i = 1; i < values.length; i++) {
+    if (String(values[i][1]) === String(data.lessonId) && String(values[i][3]) === String(data.studentId)) {
+      if ((!data.teacherFeedback || data.teacherFeedback === "-") && values[i][13] && values[i][13] !== "-") rowData[13] = values[i][13];
+      sheet.getRange(i + 1, 1, 1, rowData.length).setValues([rowData]);
+      updated = true; break;
+    }
+  }
+  if (!updated) sheet.appendRow(rowData);
   return ContentService.createTextOutput("OK");
+}
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var values = sheet.getDataRange().getValues();
+  var records = [];
+  for (var i = 1; i < values.length; i++) {
+    var rawJson = values[i][14];
+    if (rawJson) { try { var parsed = JSON.parse(rawJson); if (values[i][13] && values[i][13] !== "-") parsed.teacherFeedback = values[i][13]; records.push(parsed); } catch (err) {} }
+  }
+  return ContentService.createTextOutput(JSON.stringify(records)).setMimeType(ContentService.MimeType.JSON);
 }</textarea>
-          <div class="text-slate-600 leading-relaxed space-y-1">
-            <p><strong>2단계:</strong> 새 구글 시트(<a href="https://sheets.new" target="_blank" class="text-indigo-600 underline font-bold">sheets.new</a>) 상단 메뉴 <strong>[확장 프로그램] → [Apps Script]</strong> 클릭 후, 원래 적힌 글자를 지우고 복사한 코드를 붙여넣은 뒤 <strong>💾 저장(Ctrl+S)</strong>을 누릅니다.</p>
-            <p><strong>3단계:</strong> 우측 상단 <strong>[배포] → [새 배포] → 톱니바퀴(웹 앱) → 액세스 권한: [모든 사용자]</strong>로 변경 후 배포된 <strong>웹 앱 URL</strong>을 아래 칸에 붙여넣으세요.</p>
-          </div>
           <div class="flex flex-col sm:flex-row gap-2 pt-1">
             <input id="gas-webhook-input" type="text" placeholder="https://script.google.com/macros/s/.../exec" class="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-xs">
             <button type="button" onclick="saveWebhookUrl()" class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold shrink-0 cursor-pointer">
@@ -1155,29 +1247,86 @@
         </div>
       </div>
 
-      <!-- Real-time Student Table -->
-      <div class="p-5 overflow-y-auto flex-1">
-        <table class="w-full text-left border-collapse text-xs md:text-sm">
+      <!-- TAB 1: Real-time Student Table (Matches user's screenshot + Wrong Note + Feedback) -->
+      <div id="dash-view-table" class="p-5 overflow-y-auto flex-1">
+        <table class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="bg-slate-100 text-slate-700 border-b border-slate-300">
-              <th class="py-2.5 px-3 font-extrabold">학번</th>
-              <th class="py-2.5 px-3 font-extrabold">이름</th>
-              <th class="py-2.5 px-3 font-extrabold">빈칸 점수 (58)</th>
-              <th class="py-2.5 px-3 font-extrabold">퀴즈 초시 점수 (5)</th>
-              <th class="py-2.5 px-3 font-extrabold">문항별 초시 정오(1~5번)</th>
-              <th class="py-2.5 px-3 font-extrabold">오답 정복 현황</th>
-              <th class="py-2.5 px-3 font-extrabold">한 줄 성찰</th>
-              <th class="py-2.5 px-3 font-extrabold">최근 전송 시각</th>
+              <th class="py-2.5 px-2.5 font-extrabold">차시 / 반</th>
+              <th class="py-2.5 px-2.5 font-extrabold">학번</th>
+              <th class="py-2.5 px-2.5 font-extrabold">이름</th>
+              <th class="py-2.5 px-2.5 font-extrabold">빈칸 점수 (58)</th>
+              <th class="py-2.5 px-2.5 font-extrabold">퀴즈 초시 점수 (5)</th>
+              <th class="py-2.5 px-2.5 font-extrabold">문항별 초시 정오(1~5번)</th>
+              <th class="py-2.5 px-2.5 font-extrabold">오답 정복 현황</th>
+              <th class="py-2.5 px-2.5 font-extrabold">오답노트 & 한 줄 성찰</th>
+              <th class="py-2.5 px-2.5 font-extrabold">교사 피드백 전송</th>
+              <th class="py-2.5 px-2.5 font-extrabold">최근 전송 시각</th>
             </tr>
           </thead>
           <tbody id="submissions-tbody" class="divide-y divide-slate-200">
             <tr>
-              <td colspan="8" class="py-10 text-center text-slate-400 font-semibold">
+              <td colspan="10" class="py-10 text-center text-slate-400 font-semibold">
                 아직 연결되거나 제출한 학생이 없습니다. 상단 [학생 초대 QR] 버튼을 눌러 학생들을 초대해 보세요.
               </td>
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <!-- TAB 2: Multi-Dimensional Analytics Dashboard (By Class, Lesson, Question Best/Worst, Student) -->
+      <div id="dash-view-analytics" class="hidden p-5 overflow-y-auto flex-1 space-y-6 bg-slate-50">
+        <!-- Top KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div class="text-xs font-bold text-slate-400">분석 대상 학생 수</div>
+            <div id="kpi-student-count" class="text-2xl font-black text-slate-900 mt-1">0명</div>
+          </div>
+          <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div class="text-xs font-bold text-slate-400">빈칸 평균 점수 (58점 만점)</div>
+            <div id="kpi-blank-avg" class="text-2xl font-black text-emerald-600 mt-1">0.0점 (0%)</div>
+          </div>
+          <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div class="text-xs font-bold text-slate-400">퀴즈 초시 평균 (5점 만점)</div>
+            <div id="kpi-quiz-avg" class="text-2xl font-black text-indigo-600 mt-1">0.0점 (0%)</div>
+          </div>
+          <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div class="text-xs font-bold text-slate-400">오답노트 작성 완료율</div>
+            <div id="kpi-note-rate" class="text-2xl font-black text-amber-600 mt-1">0% (0명)</div>
+          </div>
+        </div>
+
+        <!-- Row 2: Question Analysis (Most Correct vs Most Wrong) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-black text-rose-700">🚨 최다 오답 문제 TOP 5 (집중 보충 필요)</h4>
+              <span class="text-[11px] text-slate-400">빈칸 1~58번 & 퀴즈 1~5번 통합</span>
+            </div>
+            <div id="analytics-worst-questions" class="space-y-2 text-xs"></div>
+          </div>
+
+          <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-black text-emerald-700">🌟 최다 정답 문제 TOP 5 (성취도 우수)</h4>
+              <span class="text-[11px] text-slate-400">빈칸 1~58번 & 퀴즈 1~5번 통합</span>
+            </div>
+            <div id="analytics-best-questions" class="space-y-2 text-xs"></div>
+          </div>
+        </div>
+
+        <!-- Row 3: By Class & By Lesson Breakdown -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <h4 class="text-sm font-black text-slate-900 mb-3">🏫 반별 평균 성취도 및 오답 정복 비교</h4>
+            <div id="analytics-by-class" class="space-y-2.5 text-xs"></div>
+          </div>
+
+          <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
+            <h4 class="text-sm font-black text-slate-900 mb-3">📚 수업(차시)별 누적 데이터 요약</h4>
+            <div id="analytics-by-lesson" class="space-y-2.5 text-xs"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1186,9 +1335,12 @@
        APPLICATION LOGIC
        ========================================== -->
   <script>
+    // ★ 다른 차시 수업 파일을 만드실 때는 아래 LESSON_ID 문자열만 그 차시 제목으로 변경하세요!
+    const LESSON_ID = "3-2-1 과학 기술과 미래 사회";
+
     let appRole = 'teacher';
     let roomCode = 'SCI2026';
-    let studentInfo = { id: '', name: '' };
+    let studentInfo = { id: '', name: '', classGroup: '미분류' };
     let currentSlide = 0;
     const totalSlides = 10;
     const totalBlanksCount = 58;
@@ -1200,6 +1352,10 @@
     const studentInputs = {};
     const studentCorrect = {};
 
+    // Student Wrong-Answer Notes & Teacher Feedback State
+    const studentWrongNotes = {}; // key: "Q1".."Q5" or "GENERAL" -> text
+    let receivedTeacherFeedback = '';
+
     const quizTitles = [
       "1번. 지능정보화 시대 과학 기술 발전 방향",
       "2번. 사물 인터넷(IoT)의 구성과 원격 제어",
@@ -1207,6 +1363,8 @@
       "4번. 미래 사회 5대 분야별 과학 기술 유용성",
       "5번. 과학 기술의 한계와 바람직한 준비 자세"
     ];
+
+    const quizSlideMap = [7, 7, 8, 8, 9]; // Slide index (0-based) where Q1~Q5 live
 
     const quizData = [
       {
@@ -1261,18 +1419,12 @@
       }
     ];
 
-    /*************************************************************
-     * DEFERRED QUIZ GRADING & RETRY STATE
-     * - quizSelections[qIdx]: currently selected option (0~3 or null)
-     * - quizInitialSubmitted: true once the student clicks [채점 및 제출하기] for the first time
-     * - studentQuizCorrect[qIdx]: locked on the FIRST grading submission (used for official score & leaderboard)
-     * - studentQuizResolved[qIdx]: true once the question is answered correctly (either on 1st try or retry)
-     *************************************************************/
     const quizSelections       = { 0: null, 1: null, 2: null, 3: null, 4: null };
     let quizInitialSubmitted   = false;
     const studentQuizCorrect   = { 0: false, 1: false, 2: false, 3: false, 4: false };
     const studentQuizResolved  = { 0: false, 1: false, 2: false, 3: false, 4: false };
 
+    // Key: `${lessonId}_${studentId}_${studentName}`
     const submissionsMap = {};
     let gasWebhookUrl = '';
     try { gasWebhookUrl = localStorage.getItem('gas_webhook_url') || ''; } catch (e) {}
@@ -1323,12 +1475,13 @@
     function initBlankMetadata() {
       document.querySelectorAll('.blank-slot').forEach(slot => {
         const id = Number(slot.dataset.id);
+        const slideIdx = Number(slot.dataset.slide || 1);
         const ans = (slot.dataset.ans || '').trim();
         const altRaw = slot.dataset.alt ? slot.dataset.alt.split(',') : [];
         const group = slot.dataset.group || null;
         const alts = [ans, ...altRaw].map(s => normalizeAnswer(s)).filter(Boolean);
 
-        blankMeta[id] = { id, ans, alts, group };
+        blankMeta[id] = { id, slideIdx, ans, alts, group };
         teacherRevealed[id] = false;
         studentInputs[id] = '';
         studentCorrect[id] = false;
@@ -1346,6 +1499,21 @@
         .toLowerCase()
         .replace(/\s+/g, '')
         .replace(/[.,()·\-_/]/g, '');
+    }
+
+    // Automatically parse class group from 5-digit student ID (e.g. 10205 -> 1학년 2반)
+    function parseClassGroupFromId(sid) {
+      const digits = String(sid).replace(/\D/g, '');
+      if (digits.length === 5) {
+        const grade = digits[0];
+        const cls = parseInt(digits.slice(1, 3), 10);
+        if (grade && cls > 0) return `${grade}학년 ${cls}반`;
+      } else if (digits.length === 4) {
+        const grade = digits[0];
+        const cls = parseInt(digits[1], 10);
+        if (grade && cls > 0) return `${grade}학년 ${cls}반`;
+      }
+      return '기본반';
     }
 
     function openStudentEntryModal() {
@@ -1397,7 +1565,8 @@
 
       const sid = (document.getElementById('student-id-input')?.value || '').trim() || '10101';
       const sname = (document.getElementById('student-name-input')?.value || '').trim() || '학생';
-      studentInfo = { id: sid, name: sname };
+      const cGroup = parseClassGroupFromId(sid);
+      studentInfo = { id: sid, name: sname, classGroup: cGroup };
       appRole = 'student';
 
       const entryModal = document.getElementById('student-entry-modal');
@@ -1405,7 +1574,7 @@
       entryModal.classList.remove('flex');
 
       const badge = document.getElementById('role-badge');
-      badge.textContent = `학생: ${studentInfo.id} ${studentInfo.name}`;
+      badge.textContent = `${studentInfo.classGroup} · ${studentInfo.id} ${studentInfo.name}`;
       badge.className = 'px-2.5 py-1 rounded-lg text-xs font-extrabold bg-emerald-600 text-white';
 
       document.getElementById('switch-to-student-btn').classList.add('hidden');
@@ -1527,10 +1696,6 @@
       });
     }
 
-    /*************************************************************
-     * BLANKS: Teacher click-to-reveal ONLY shows on Teacher screen.
-     * Student screen renders clean typing inputs and grades live.
-     *************************************************************/
     function renderBlanksForRole() {
       document.querySelectorAll('.blank-slot').forEach(slot => {
         const id = Number(slot.dataset.id);
@@ -1661,7 +1826,7 @@
 
       const quizLiveEl = document.getElementById('student-quiz-live');
       if (quizLiveEl) {
-        quizLiveEl.textContent = quizInitialSubmitted ? `${quizCount} / 5` : '채점전';
+        quizLiveEl.textContent = quizInitialSubmitted ? `${quizCount}/5` : '채점전';
       }
 
       const finalBlank = document.getElementById('final-blank-score');
@@ -1712,7 +1877,7 @@
 
     function initKeyboardNav() {
       window.addEventListener('keydown', (e) => {
-        if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return;
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
         if (e.key === 'ArrowRight' || e.key === 'PageDown') changeSlide(1);
         if (e.key === 'ArrowLeft' || e.key === 'PageUp') changeSlide(-1);
       });
@@ -1757,7 +1922,6 @@
      * DEFERRED QUIZ SELECTION -> SUBMIT TO GRADE -> RETRY FLOW
      *************************************************************/
     function selectQuizOption(qIdx, optIdx) {
-      // Once a question is already resolved (correct), lock it so they don't accidentally unselect it
       if (studentQuizResolved[qIdx]) return;
 
       quizSelections[qIdx] = optIdx;
@@ -1817,7 +1981,6 @@
     }
 
     function gradeAndSubmitQuiz() {
-      // Check if any question is still unselected on first submission
       const unselected = [];
       for (let i = 0; i < 5; i++) {
         if (quizSelections[i] === null) unselected.push(`${i + 1}번`);
@@ -1834,7 +1997,6 @@
       const isFirstGrading = !quizInitialSubmitted;
       quizInitialSubmitted = true;
 
-      let currentResolvedCount = 0;
       const wrongNumbers = [];
 
       for (let qIdx = 0; qIdx < 5; qIdx++) {
@@ -1849,11 +2011,7 @@
 
         if (chosen === q.answer) {
           studentQuizResolved[qIdx] = true;
-          currentResolvedCount++;
-
-          if (isFirstGrading) {
-            studentQuizCorrect[qIdx] = true;
-          }
+          if (isFirstGrading) studentQuizCorrect[qIdx] = true;
 
           buttons.forEach((b, i) => {
             if (i === chosen) {
@@ -1878,10 +2036,7 @@
             : '<span class="text-amber-700 font-extrabold">[재도전으로 정답 찾기 성공! (공식 점수는 첫 채점 기준)]</span>';
           fb.innerHTML = `⭕ <strong>정답입니다!</strong> ${tag}<br>${q.explanation}`;
         } else {
-          // Wrong answer on grading
-          if (isFirstGrading) {
-            studentQuizCorrect[qIdx] = false;
-          }
+          if (isFirstGrading) studentQuizCorrect[qIdx] = false;
           wrongNumbers.push(`${qIdx + 1}번`);
 
           buttons.forEach((b, i) => {
@@ -1910,18 +2065,17 @@
       const firstScore = Object.values(studentQuizCorrect).filter(Boolean).length;
 
       if (wrongNumbers.length === 0) {
-        statusPill.textContent = '🎉 전 문항 정답 완료!';
+        statusPill.textContent = '🎉 5/5 정복 완료!';
         statusPill.className = 'text-[11px] font-extrabold text-emerald-300';
         gradeBtn.textContent = '🎉 모든 문항 정답 확인 완료!';
-        gradeBtn.className = 'w-full py-3 rounded-xl bg-emerald-600 text-white font-black text-sm shadow-lg cursor-default';
+        gradeBtn.className = 'w-full py-2.5 rounded-xl bg-emerald-600 text-white font-black text-xs shadow-lg cursor-default';
       } else {
         statusPill.textContent = `오답 ${wrongNumbers.length}개 재도전 가능`;
         statusPill.className = 'text-[11px] font-extrabold text-rose-300';
         gradeBtn.textContent = `🔄 오답 문항(${wrongNumbers.join(', ')}) 다시 채점하기`;
-        gradeBtn.className = 'w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm shadow-lg transition cursor-pointer';
+        gradeBtn.className = 'w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-lg transition cursor-pointer';
       }
 
-      // Send graded result to Teacher immediately
       if (appRole === 'student') {
         submitStudentWork(false);
       }
@@ -1930,17 +2084,143 @@
         if (wrongNumbers.length === 0) {
           alert(`🎉 채점 완료! 첫 시도에 5문항을 모두 맞혔습니다! (공식 퀴즈 점수: 5 / 5점)`);
         } else {
-          alert(`채점이 완료되었습니다!\n• 첫 채점 공식 점수: ${firstScore} / 5점\n• 틀린 문항: ${wrongNumbers.join(', ')}\n\n틀린 문항 번호를 눌러 힌트를 읽고 다른 답을 선택한 뒤 [다시 채점하기]를 눌러 끝까지 정답을 찾아보세요!`);
+          alert(`채점이 완료되었습니다!\n• 첫 채점 공식 점수: ${firstScore} / 5점\n• 틀린 문항: ${wrongNumbers.join(', ')}\n\n틀린 문항 번호를 눌러 다시 풀어보거나 [📓 내 오답 다시 보기 & 오답노트] 버튼을 눌러 복습해 보세요!`);
         }
       } else {
         if (wrongNumbers.length === 0) {
-          alert(`👏 훌륭합니다! 재도전을 통해 틀렸던 문제의 정답을 모두 찾아냈습니다! (첫 채점 공식 점수: ${firstScore} / 5점)`);
+          alert(`👏 훌륭합니다! 재도전을 통해 틀렸던 문제의 정답을 모두 찾아 '5/5 정복 완료'를 달성했습니다!`);
         } else {
           alert(`다시 채점 결과: 아직 ${wrongNumbers.join(', ')} 문항이 오답입니다. 힌트를 참고해 다시 선택해 보세요!`);
         }
       }
     }
 
+    /*************************************************************
+     * STUDENT WRONG-ANSWER NOTE & JUMP-TO-SLIDE REVIEW
+     *************************************************************/
+    function openStudentWrongNoteModal() {
+      renderStudentWrongNoteModalContent();
+      const modal = document.getElementById('student-wrong-note-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      document.getElementById('feedback-unread-dot')?.classList.add('hidden');
+    }
+
+    function closeStudentWrongNoteModal() {
+      const modal = document.getElementById('student-wrong-note-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    function jumpToSlideAndHighlightBlank(slideIdx, blankId) {
+      closeStudentWrongNoteModal();
+      goToSlide(slideIdx, false);
+      setTimeout(() => {
+        const inputEl = document.getElementById(`student-input-${blankId}`);
+        if (inputEl) {
+          inputEl.focus();
+          inputEl.classList.add('highlight-review-target');
+          setTimeout(() => inputEl.classList.remove('highlight-review-target'), 3600);
+        }
+      }, 250);
+    }
+
+    function jumpToSlideAndHighlightQuiz(qIdx) {
+      closeStudentWrongNoteModal();
+      const slideIdx = quizSlideMap[qIdx] || 7;
+      goToSlide(slideIdx, false);
+      setTimeout(() => {
+        const box = document.getElementById(`quiz-box-${qIdx}`);
+        if (box) {
+          box.classList.add('highlight-review-target');
+          setTimeout(() => box.classList.remove('highlight-review-target'), 3600);
+        }
+      }, 250);
+    }
+
+    function renderStudentWrongNoteModalContent() {
+      // 1) Wrong or unfilled blanks
+      const wrongBlankIds = Object.keys(blankMeta).map(Number).filter(id => !studentCorrect[id]);
+      const blankContainer = document.getElementById('student-wrong-blanks-list');
+
+      if (wrongBlankIds.length === 0) {
+        blankContainer.innerHTML = `<div class="text-xs font-extrabold text-emerald-700">🎉 58개 빈칸을 모두 완벽하게 채웠습니다!</div>`;
+      } else {
+        blankContainer.innerHTML = wrongBlankIds.map(id => {
+          const meta = blankMeta[id];
+          const myVal = studentInputs[id] ? `(내 입력: ${escapeHtml(studentInputs[id])})` : '(미입력)';
+          return `
+            <button type="button" onclick="jumpToSlideAndHighlightBlank(${meta.slideIdx}, ${id})" class="px-3 py-1.5 rounded-xl bg-white hover:bg-rose-50 border border-rose-300 text-rose-800 text-xs font-extrabold shadow-sm transition cursor-pointer flex items-center gap-1">
+              🔍 빈칸 (${id})번 ${myVal} → <span class="underline text-indigo-700">${meta.slideIdx + 1}페이지 가서 복습</span>
+            </button>
+          `;
+        }).join('');
+      }
+
+      // 2) Wrong Quiz items (based on initial grading OR currently unresolved)
+      const quizContainer = document.getElementById('student-wrong-quiz-list');
+      const wrongQIndices = [0, 1, 2, 3, 4].filter(i => !studentQuizCorrect[i]);
+
+      if (!quizInitialSubmitted) {
+        quizContainer.innerHTML = `
+          <div class="p-4 rounded-2xl bg-slate-100 text-slate-600 text-xs font-bold">
+            아직 10페이지에서 [마무리 퀴즈 채점 및 제출하기]를 누르지 않았습니다. 먼저 퀴즈를 풀고 채점해 보세요!
+          </div>
+        `;
+      } else if (wrongQIndices.length === 0) {
+        quizContainer.innerHTML = `
+          <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-extrabold">
+            🎉 첫 채점에서 퀴즈 5문항을 모두 맞혔습니다! 아래 요약 노트에 오늘 가장 인상 깊었던 개념을 정리해 보세요.
+          </div>
+        `;
+      } else {
+        quizContainer.innerHTML = wrongQIndices.map(qIdx => {
+          const savedNote = studentWrongNotes[`Q${qIdx + 1}`] || '';
+          const resolvedBadge = studentQuizResolved[qIdx]
+            ? '<span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[11px] font-extrabold">재도전 정복 완료 ⭕</span>'
+            : '<span class="px-2 py-0.5 rounded bg-rose-100 text-rose-800 text-[11px] font-extrabold">미정복 ❌</span>';
+
+          return `
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-xs font-black text-rose-700">${quizTitles[qIdx]}</span>
+                  ${resolvedBadge}
+                </div>
+                <button type="button" onclick="jumpToSlideAndHighlightQuiz(${qIdx})" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer">
+                  🔍 이 문제 슬라이드로 이동해서 다시 풀기
+                </button>
+              </div>
+              <input type="text" data-qnote="${qIdx + 1}" value="${escapeHtml(savedNote)}" placeholder="이 문제를 틀린 이유나 핵심 개념을 한 줄로 적어보세요" class="wrong-q-input w-full px-3 py-2 rounded-xl bg-white border border-slate-300 text-xs font-semibold text-slate-800 focus:outline-none focus:border-indigo-600">
+            </div>
+          `;
+        }).join('');
+      }
+
+      const genArea = document.getElementById('student-general-wrong-note');
+      if (genArea) genArea.value = studentWrongNotes['GENERAL'] || '';
+    }
+
+    function collectStudentWrongNotesFromDOM() {
+      document.querySelectorAll('.wrong-q-input').forEach(inp => {
+        const qNum = inp.dataset.qnote;
+        studentWrongNotes[`Q${qNum}`] = inp.value.trim();
+      });
+      const genArea = document.getElementById('student-general-wrong-note');
+      if (genArea) {
+        studentWrongNotes['GENERAL'] = genArea.value.trim();
+      }
+    }
+
+    function saveAndSendWrongNote() {
+      collectStudentWrongNotesFromDOM();
+      submitStudentWork(true);
+      closeStudentWrongNoteModal();
+    }
+
+    /*************************************************************
+     * QUIZ STATS MODAL
+     *************************************************************/
     function openQuizStatsModal() {
       renderQuizStatsContent();
       const modal = document.getElementById('quiz-stats-modal');
@@ -1955,7 +2235,7 @@
     }
 
     function renderQuizStatsContent() {
-      const students = Object.values(submissionsMap);
+      const students = Object.values(submissionsMap).filter(s => s.lessonId === LESSON_ID);
       const total = students.length;
       document.getElementById('stat-total-students').textContent = total;
 
@@ -2038,6 +2318,9 @@
       alert('학생들의 화면에도 문항별 정답자 수와 최다 정답 학생 명단을 공개했습니다!');
     }
 
+    /*************************************************************
+     * WHITEBOARD CANVAS
+     *************************************************************/
     let canvas, ctx;
 
     function initWhiteboardCanvas() {
@@ -2162,6 +2445,9 @@
       }
     }
 
+    /*************************************************************
+     * REALTIME CHANNELS (PeerJS + BroadcastChannel)
+     *************************************************************/
     function initRealtimeChannels() {
       try {
         if ('BroadcastChannel' in window) {
@@ -2269,6 +2555,14 @@
         } else if (msg.type === 'SHOW_QUIZ_STATS') {
           Object.assign(submissionsMap, msg.submissions || {});
           openQuizStatsModal();
+        } else if (msg.type === 'TEACHER_FEEDBACK_TO_STUDENT') {
+          if (String(msg.studentId) === String(studentInfo.id)) {
+            receivedTeacherFeedback = msg.feedback || '';
+            const fbContent = document.getElementById('student-feedback-content');
+            if (fbContent) fbContent.textContent = receivedTeacherFeedback;
+            document.getElementById('feedback-unread-dot')?.classList.remove('hidden');
+            alert(`💬 선생님으로부터 피드백이 도착했습니다!\n\n"${receivedTeacherFeedback}"`);
+          }
         }
       } else if (appRole === 'teacher') {
         if (msg.type === 'STUDENT_SUBMISSION') {
@@ -2277,10 +2571,14 @@
       }
     }
 
+    /*************************************************************
+     * STUDENT SUBMISSION (Includes Exact Screenshot Fields + Wrong Note)
+     *************************************************************/
     function submitStudentWork(isManualClick = false) {
       if (appRole !== 'student') return;
 
-      // If student clicks final submit button before grading the quiz, grade it automatically if all 5 are selected
+      collectStudentWrongNotesFromDOM();
+
       if (isManualClick && !quizInitialSubmitted) {
         const allSelected = Object.values(quizSelections).every(v => v !== null);
         if (allSelected) {
@@ -2295,17 +2593,44 @@
         .map(Number)
         .filter(id => !studentCorrect[id]);
 
+      // Exact formatted strings matching user's screenshot
+      const quizDetailText = !quizInitialSubmitted
+        ? "채점 전"
+        : [0, 1, 2, 3, 4].map(i => `${i + 1}:${studentQuizCorrect[i] ? 'O' : 'X'}`).join(' ');
+
+      const conquestText = !quizInitialSubmitted
+        ? "채점 전"
+        : (resolvedCount === 5 ? "5/5 정복 완료" : `${resolvedCount}/5 재도전 중`);
+
+      const wrongBlanksText = wrongBlankIds.length === 0 ? "전 문항 정답" : wrongBlankIds.join(', ');
+
+      // Format student wrong notes
+      const noteEntries = Object.entries(studentWrongNotes).filter(([_, val]) => val && val.trim().length > 0);
+      const wrongNoteCount = noteEntries.length;
+      const wrongNoteText = noteEntries.map(([k, v]) => `[${k}] ${v}`).join(' | ');
+
       const payload = {
+        lessonId: LESSON_ID,
+        classGroup: studentInfo.classGroup || parseClassGroupFromId(studentInfo.id),
         studentId: studentInfo.id,
         studentName: studentInfo.name,
+        totalBlanks: totalBlanksCount,
         blankScore,
         quizScore,
         quizInitialSubmitted,
         quizDetail: { ...studentQuizCorrect },
+        quizDetailText,
         quizResolved: { ...studentQuizResolved },
         resolvedCount,
+        conquestText,
         wrongBlankIds,
-        answers: studentInputs,
+        wrongBlanksText,
+        wrongNotes: { ...studentWrongNotes },
+        wrongNoteCount,
+        wrongNoteText,
+        teacherFeedback: receivedTeacherFeedback || '',
+        answers: { ...studentInputs },
+        blankCorrectMap: { ...studentCorrect },
         reflection: (document.getElementById('student-reflection')?.value || '').trim(),
         timestamp: new Date().toLocaleTimeString('ko-KR')
       };
@@ -2330,27 +2655,149 @@
           msg.classList.remove('hidden');
           setTimeout(() => msg.classList.add('hidden'), 3500);
         }
-        alert(`선생님께 제출되었습니다!\n• 빈칸 점수: ${blankScore} / ${totalBlanksCount}\n• 확인 퀴즈 점수(첫 채점 기준): ${quizInitialSubmitted ? quizScore + ' / 5' : '미채점'}`);
+        alert(`선생님께 전송되었습니다!\n• 빈칸 점수: ${blankScore} / ${totalBlanksCount}\n• 퀴즈 초시 점수: ${quizInitialSubmitted ? quizScore + ' / 5' : '미채점'}\n• 오답 정복 현황: ${conquestText}\n• 오답노트 작성: ${wrongNoteCount}건`);
       }
     }
 
+    /*************************************************************
+     * TEACHER DASHBOARD, FEEDBACK & MULTI-DIMENSIONAL ANALYTICS
+     *************************************************************/
     function recordStudentSubmission(data) {
       if (!data) return;
-      const key = `${data.studentId}_${data.studentName}`;
+      const lessonKey = data.lessonId || LESSON_ID;
+      const key = `${lessonKey}_${data.studentId}_${data.studentName}`;
+      // Preserve existing teacher feedback if already written
+      if (submissionsMap[key]?.teacherFeedback && !data.teacherFeedback) {
+        data.teacherFeedback = submissionsMap[key].teacherFeedback;
+      }
       submissionsMap[key] = data;
-      const count = Object.keys(submissionsMap).length;
-      document.getElementById('student-count-badge').textContent = count;
-      renderSubmissionsTable();
+
+      document.getElementById('student-count-badge').textContent = Object.keys(submissionsMap).length;
+      updateDashboardFilters();
+      refreshDashboardViews();
+
       const statModal = document.getElementById('quiz-stats-modal');
       if (statModal && !statModal.classList.contains('hidden')) {
         renderQuizStatsContent();
       }
     }
 
+    function sendTeacherFeedback(recordKey) {
+      const item = submissionsMap[recordKey];
+      if (!item) return;
+      const inputEl = document.getElementById(`fb-input-${recordKey}`);
+      const fbText = (inputEl?.value || '').trim();
+      if (!fbText) {
+        alert('학생에게 보낼 피드백 내용을 입력해 주세요.');
+        return;
+      }
+
+      item.teacherFeedback = fbText;
+
+      // 1) Send live to Student screen via PeerJS / BroadcastChannel
+      broadcastMessage({
+        type: 'TEACHER_FEEDBACK_TO_STUDENT',
+        studentId: item.studentId,
+        feedback: fbText
+      });
+
+      // 2) Update Google Sheet row if webhook is configured
+      if (gasWebhookUrl) {
+        fetch(gasWebhookUrl, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'TEACHER_FEEDBACK',
+            lessonId: item.lessonId || LESSON_ID,
+            studentId: item.studentId,
+            teacherFeedback: fbText
+          })
+        }).catch(() => {});
+      }
+
+      refreshDashboardViews();
+      alert(`${item.studentId} ${item.studentName} 학생에게 피드백을 전송했습니다!`);
+    }
+
+    function updateDashboardFilters() {
+      const lessonSelect = document.getElementById('filter-lesson-select');
+      const classSelect = document.getElementById('filter-class-select');
+      if (!lessonSelect || !classSelect) return;
+
+      const prevLesson = lessonSelect.value || 'ALL';
+      const prevClass = classSelect.value || 'ALL';
+
+      const lessons = new Set();
+      const classes = new Set();
+      Object.values(submissionsMap).forEach(item => {
+        lessons.add(item.lessonId || LESSON_ID);
+        classes.add(item.classGroup || parseClassGroupFromId(item.studentId));
+      });
+
+      lessonSelect.innerHTML = `<option value="ALL">전체 수업 차시 (${lessons.size})</option>` +
+        Array.from(lessons).map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+
+      classSelect.innerHTML = `<option value="ALL">전체 반 (${classes.size})</option>` +
+        Array.from(classes).sort().map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
+      if (Array.from(lessons).includes(prevLesson)) lessonSelect.value = prevLesson;
+      if (Array.from(classes).includes(prevClass)) classSelect.value = prevClass;
+    }
+
+    function getFilteredSubmissions() {
+      const lessonFilter = document.getElementById('filter-lesson-select')?.value || 'ALL';
+      const classFilter = document.getElementById('filter-class-select')?.value || 'ALL';
+
+      return Object.entries(submissionsMap)
+        .map(([key, item]) => ({ key, ...item }))
+        .filter(item => {
+          const lMatch = lessonFilter === 'ALL' || (item.lessonId || LESSON_ID) === lessonFilter;
+          const cGroup = item.classGroup || parseClassGroupFromId(item.studentId);
+          const cMatch = classFilter === 'ALL' || cGroup === classFilter;
+          return lMatch && cMatch;
+        });
+    }
+
+    function switchDashboardTab(tab) {
+      const tableView = document.getElementById('dash-view-table');
+      const analyticsView = document.getElementById('dash-view-analytics');
+      const btnTable = document.getElementById('dash-tab-btn-table');
+      const btnAnalytics = document.getElementById('dash-tab-btn-analytics');
+
+      if (tab === 'analytics') {
+        tableView.classList.add('hidden');
+        analyticsView.classList.remove('hidden');
+        btnAnalytics.className = 'px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-extrabold shadow cursor-pointer';
+        btnTable.className = 'px-4 py-2 rounded-xl bg-white hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-extrabold cursor-pointer';
+      } else {
+        analyticsView.classList.add('hidden');
+        tableView.classList.remove('hidden');
+        btnTable.className = 'px-4 py-2 rounded-xl bg-slate-900 text-white text-xs font-extrabold shadow cursor-pointer';
+        btnAnalytics.className = 'px-4 py-2 rounded-xl bg-white hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-extrabold cursor-pointer';
+      }
+      refreshDashboardViews();
+    }
+
+    function refreshDashboardViews() {
+      renderSubmissionsTable();
+      renderMultiDimensionalAnalytics();
+    }
+
     function renderSubmissionsTable() {
       const tbody = document.getElementById('submissions-tbody');
-      const list = Object.values(submissionsMap);
-      if (list.length === 0) return;
+      const list = getFilteredSubmissions();
+
+      if (list.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="10" class="py-10 text-center text-slate-400 font-semibold">
+              조건에 해당하는 제출 학생 데이터가 없습니다.
+            </td>
+          </tr>
+        `;
+        return;
+      }
 
       tbody.innerHTML = list.map(item => {
         const qBadges = [0, 1, 2, 3, 4].map(i => {
@@ -2367,22 +2814,197 @@
               ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-extrabold text-xs">5/5 정복 완료</span>'
               : `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-bold text-xs">${item.resolvedCount || 0}/5 재도전 중</span>`);
 
+        const noteBadge = item.wrongNoteCount > 0
+          ? `<span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-extrabold text-[11px]">오답노트 ${item.wrongNoteCount}건</span>`
+          : `<span class="px-2 py-0.5 rounded bg-slate-100 text-slate-400 font-bold text-[11px]">오답노트 미작성</span>`;
+
+        const cGroup = item.classGroup || parseClassGroupFromId(item.studentId);
+
         return `
-          <tr class="hover:bg-slate-50">
-            <td class="py-2.5 px-3 font-bold">${escapeHtml(item.studentId)}</td>
-            <td class="py-2.5 px-3 font-extrabold text-indigo-900">${escapeHtml(item.studentName)}</td>
-            <td class="py-2.5 px-3 font-extrabold text-emerald-700">${item.blankScore} / ${totalBlanksCount}</td>
-            <td class="py-2.5 px-3 font-extrabold text-amber-700">${item.quizInitialSubmitted ? item.quizScore + ' / 5' : '미채점'}</td>
-            <td class="py-2.5 px-3">${qBadges}</td>
-            <td class="py-2.5 px-3">${retryBadge}</td>
-            <td class="py-2.5 px-3 text-xs text-slate-700">${escapeHtml(item.reflection || '-')}</td>
-            <td class="py-2.5 px-3 text-xs text-slate-500">${item.timestamp}</td>
+          <tr class="hover:bg-slate-50 align-top">
+            <td class="py-2.5 px-2.5">
+              <div class="font-extrabold text-slate-800">${escapeHtml(cGroup)}</div>
+              <div class="text-[10px] text-slate-400">${escapeHtml(item.lessonId || LESSON_ID)}</div>
+            </td>
+            <td class="py-2.5 px-2.5 font-bold">${escapeHtml(item.studentId)}</td>
+            <td class="py-2.5 px-2.5 font-extrabold text-indigo-900">${escapeHtml(item.studentName)}</td>
+            <td class="py-2.5 px-2.5 font-extrabold text-emerald-700">${item.blankScore} / ${item.totalBlanks || 58}</td>
+            <td class="py-2.5 px-2.5 font-extrabold text-amber-700">${item.quizInitialSubmitted ? item.quizScore + ' / 5' : '미채점'}</td>
+            <td class="py-2.5 px-2.5 leading-relaxed">${qBadges}</td>
+            <td class="py-2.5 px-2.5">${retryBadge}</td>
+            <td class="py-2.5 px-2.5 max-w-xs space-y-1">
+              <div>${noteBadge}</div>
+              ${item.wrongNoteText ? `<div class="text-[11px] text-indigo-900 bg-indigo-50 p-1.5 rounded border border-indigo-100">${escapeHtml(item.wrongNoteText)}</div>` : ''}
+              ${item.reflection ? `<div class="text-[11px] text-slate-600">성찰: ${escapeHtml(item.reflection)}</div>` : ''}
+            </td>
+            <td class="py-2.5 px-2.5">
+              <div class="flex gap-1">
+                <input id="fb-input-${item.key}" type="text" value="${escapeHtml(item.teacherFeedback || '')}" placeholder="피드백 입력" class="w-32 px-2 py-1 rounded border border-slate-300 text-xs">
+                <button type="button" onclick="sendTeacherFeedback('${item.key}')" class="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-[11px] shrink-0 cursor-pointer">전송</button>
+              </div>
+            </td>
+            <td class="py-2.5 px-2.5 text-slate-500">${escapeHtml(item.timestamp || '-')}</td>
           </tr>
         `;
       }).join('');
     }
 
+    function renderMultiDimensionalAnalytics() {
+      const list = getFilteredSubmissions();
+      const count = list.length;
+
+      document.getElementById('kpi-student-count').textContent = `${count}명`;
+      if (count === 0) {
+        document.getElementById('kpi-blank-avg').textContent = '0.0점 (0%)';
+        document.getElementById('kpi-quiz-avg').textContent = '0.0점 (0%)';
+        document.getElementById('kpi-note-rate').textContent = '0% (0명)';
+        document.getElementById('analytics-worst-questions').innerHTML = '<div class="text-slate-400">데이터가 없습니다.</div>';
+        document.getElementById('analytics-best-questions').innerHTML = '<div class="text-slate-400">데이터가 없습니다.</div>';
+        document.getElementById('analytics-by-class').innerHTML = '<div class="text-slate-400">데이터가 없습니다.</div>';
+        document.getElementById('analytics-by-lesson').innerHTML = '<div class="text-slate-400">데이터가 없습니다.</div>';
+        return;
+      }
+
+      // 1) KPI Calculations
+      const sumBlank = list.reduce((acc, s) => acc + (Number(s.blankScore) || 0), 0);
+      const avgBlank = sumBlank / count;
+      const pctBlank = Math.round((avgBlank / totalBlanksCount) * 100);
+
+      const sumQuiz = list.reduce((acc, s) => acc + (Number(s.quizScore) || 0), 0);
+      const avgQuiz = sumQuiz / count;
+      const pctQuiz = Math.round((avgQuiz / 5) * 100);
+
+      const noteWrittenCount = list.filter(s => (s.wrongNoteCount || 0) > 0).length;
+      const pctNote = Math.round((noteWrittenCount / count) * 100);
+
+      document.getElementById('kpi-blank-avg').textContent = `${avgBlank.toFixed(1)}점 (${pctBlank}%)`;
+      document.getElementById('kpi-quiz-avg').textContent = `${avgQuiz.toFixed(1)}점 (${pctQuiz}%)`;
+      document.getElementById('kpi-note-rate').textContent = `${pctNote}% (${noteWrittenCount}명)`;
+
+      // 2) Question-level Accuracy (Blanks 1..58 + Quiz 1..5)
+      const questionStats = [];
+      for (let b = 1; b <= totalBlanksCount; b++) {
+        let correctCnt = 0;
+        list.forEach(s => {
+          const isWrong = (s.wrongBlankIds || []).includes(b);
+          if (!isWrong && s.blankScore > 0) correctCnt++;
+          else if (s.blankCorrectMap && s.blankCorrectMap[b]) correctCnt++;
+        });
+        const rate = Math.round((correctCnt / count) * 100);
+        questionStats.push({
+          label: `빈칸 (${b})번 [${blankMeta[b]?.ans || ''}]`,
+          correctCnt,
+          wrongCnt: count - correctCnt,
+          rate
+        });
+      }
+
+      for (let q = 0; q < 5; q++) {
+        let correctCnt = 0;
+        list.forEach(s => {
+          if (s.quizDetail && s.quizDetail[q]) correctCnt++;
+        });
+        const rate = Math.round((correctCnt / count) * 100);
+        questionStats.push({
+          label: `확인퀴즈 ${quizTitles[q]}`,
+          correctCnt,
+          wrongCnt: count - correctCnt,
+          rate
+        });
+      }
+
+      const worst5 = [...questionStats].sort((a, b) => a.rate - b.rate).slice(0, 5);
+      const best5 = [...questionStats].sort((a, b) => b.rate - a.rate).slice(0, 5);
+
+      document.getElementById('analytics-worst-questions').innerHTML = worst5.map(item => `
+        <div class="p-2.5 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-between">
+          <span class="font-bold text-slate-800">${escapeHtml(item.label)}</span>
+          <span class="font-black text-rose-700">오답 ${item.wrongCnt}명 (정답률 ${item.rate}%)</span>
+        </div>
+      `).join('');
+
+      document.getElementById('analytics-best-questions').innerHTML = best5.map(item => `
+        <div class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-between">
+          <span class="font-bold text-slate-800">${escapeHtml(item.label)}</span>
+          <span class="font-black text-emerald-700">정답 ${item.correctCnt}명 (정답률 ${item.rate}%)</span>
+        </div>
+      `).join('');
+
+      // 3) Breakdown by Class Group
+      const classGroups = {};
+      list.forEach(s => {
+        const cg = s.classGroup || parseClassGroupFromId(s.studentId);
+        if (!classGroups[cg]) classGroups[cg] = [];
+        classGroups[cg].push(s);
+      });
+
+      document.getElementById('analytics-by-class').innerHTML = Object.entries(classGroups).map(([cgName, arr]) => {
+        const cAvgBlank = (arr.reduce((a, b) => a + (b.blankScore || 0), 0) / arr.length).toFixed(1);
+        const cAvgQuiz = (arr.reduce((a, b) => a + (b.quizScore || 0), 0) / arr.length).toFixed(1);
+        const conquered = arr.filter(x => x.resolvedCount === 5).length;
+        return `
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            <div>
+              <span class="font-black text-indigo-900">${escapeHtml(cgName)}</span>
+              <span class="text-slate-400 ml-1">(${arr.length}명)</span>
+            </div>
+            <div class="flex items-center gap-3 font-bold">
+              <span class="text-emerald-700">빈칸 평균 ${cAvgBlank}/58</span>
+              <span class="text-indigo-700">퀴즈 초시 ${cAvgQuiz}/5</span>
+              <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[11px]">5/5 정복 ${conquered}명</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // 4) Breakdown by Lesson ID
+      const lessonGroups = {};
+      list.forEach(s => {
+        const lid = s.lessonId || LESSON_ID;
+        if (!lessonGroups[lid]) lessonGroups[lid] = [];
+        lessonGroups[lid].push(s);
+      });
+
+      document.getElementById('analytics-by-lesson').innerHTML = Object.entries(lessonGroups).map(([lidName, arr]) => {
+        const lAvgBlank = (arr.reduce((a, b) => a + (b.blankScore || 0), 0) / arr.length).toFixed(1);
+        const lAvgQuiz = (arr.reduce((a, b) => a + (b.quizScore || 0), 0) / arr.length).toFixed(1);
+        return `
+          <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+            <div>
+              <span class="font-black text-slate-900">${escapeHtml(lidName)}</span>
+              <span class="text-slate-400 ml-1">(${arr.length}명 참여)</span>
+            </div>
+            <div class="flex items-center gap-3 font-bold">
+              <span class="text-emerald-700">빈칸 평균 ${lAvgBlank}점</span>
+              <span class="text-amber-700">퀴즈 평균 ${lAvgQuiz}/5</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Fetch all multi-lesson historical records from Google Sheet (doGet)
+    function fetchAllRecordsFromGoogleSheet() {
+      if (!gasWebhookUrl) {
+        alert('먼저 [📖 구글 시트 설정법]을 눌러 구글 스프레드시트 웹 앱 URL을 저장해 주세요.');
+        return;
+      }
+      fetch(gasWebhookUrl)
+        .then(res => res.json())
+        .then(records => {
+          if (Array.isArray(records)) {
+            records.forEach(r => recordStudentSubmission(r));
+            alert(`☁️ 구글 스프레드시트에서 총 ${records.length}건의 누적 수업 데이터를 성공적으로 불러왔습니다!`);
+          }
+        })
+        .catch(() => {
+          alert('구글 시트 데이터를 불러오지 못했습니다. Apps Script에 새 코드(doGet 포함)를 배포하셨는지 확인해 주세요.');
+        });
+    }
+
     function openTeacherDashboard() {
+      updateDashboardFilters();
+      refreshDashboardViews();
       document.getElementById('teacher-dashboard-modal').classList.remove('hidden');
       document.getElementById('teacher-dashboard-modal').classList.add('flex');
     }
@@ -2410,31 +3032,37 @@
       alert('구글 시트 주소가 저장되었으며, 현재 연결된 모든 학생 기기에도 적용되었습니다.');
     }
 
+    // CSV Export matching exact columns from user's screenshot + Wrong Notes + Feedback
     function exportSubmissionsCSV() {
-      const list = Object.values(submissionsMap);
+      const list = getFilteredSubmissions();
       if (list.length === 0) {
         alert('아직 제출된 학생 데이터가 없습니다.');
         return;
       }
 
-      const headers = ['학번', '이름', `빈칸점수(${totalBlanksCount})`, '퀴즈초시점수(5)', '오답정복수(5)', 'Q1(초시)', 'Q2(초시)', 'Q3(초시)', 'Q4(초시)', 'Q5(초시)', '한줄성찰', '제출시각'];
+      const headers = [
+        '수업차시', '반', '학번', '이름',
+        `빈칸 점수 (${totalBlanksCount})`, '퀴즈 초시 점수 (5)',
+        '문항별 초시 정오(1~5번)', '오답 정복 현황',
+        '오답노트 작성여부', '학생 오답노트 내용', '한 줄 성찰', '교사 피드백', '최근 전송 시각'
+      ];
       for (let i = 1; i <= totalBlanksCount; i++) headers.push(`빈칸(${i})_${blankMeta[i]?.ans || ''}`);
 
       const rows = list.map(item => {
-        const qd = item.quizDetail || {};
         const base = [
+          item.lessonId || LESSON_ID,
+          item.classGroup || parseClassGroupFromId(item.studentId),
           item.studentId,
           item.studentName,
-          item.blankScore,
-          item.quizScore,
-          item.resolvedCount || 0,
-          qd[0] ? 'O' : 'X',
-          qd[1] ? 'O' : 'X',
-          qd[2] ? 'O' : 'X',
-          qd[3] ? 'O' : 'X',
-          qd[4] ? 'O' : 'X',
-          item.reflection || '',
-          item.timestamp
+          `${item.blankScore} / ${totalBlanksCount}`,
+          item.quizInitialSubmitted ? `${item.quizScore} / 5` : '미채점',
+          item.quizDetailText || '-',
+          item.conquestText || '채점 전',
+          item.wrongNoteCount > 0 ? `작성완료(${item.wrongNoteCount}건)` : '미작성',
+          item.wrongNoteText || '-',
+          item.reflection || '-',
+          item.teacherFeedback || '-',
+          item.timestamp || '-'
         ];
         for (let i = 1; i <= totalBlanksCount; i++) {
           base.push((item.answers && item.answers[i]) ? item.answers[i] : '');
@@ -2447,7 +3075,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `[통합과학2_3-2-1]_학생답안수합_${roomCode}.csv`;
+      a.download = `[통합분석대시보드]_학생답안수합_${roomCode}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     }
@@ -2456,7 +3084,8 @@
       return String(str)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
     }
   </script>
 </body>
