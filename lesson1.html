@@ -3,11 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>[통합과학2] 3-2-1 과학 기술과 미래 사회 - 실시간 수업 & 통합 분석 대시보드</title>
+  <title>[통합과학2] 실시간 양방향 수업 & AI PDF 슬라이드 자동 생성 플랫폼</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- PeerJS for Real-time Cross-Device Sync -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <!-- Mozilla PDF.js for Client-side PDF Text & Image Extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <!-- Pretendard Font -->
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <style>
@@ -58,7 +60,7 @@
       display: none;
       width: 100%;
       height: 100%;
-      padding: 24px 32px;
+      padding: 22px 30px;
       overflow-y: auto;
       flex-direction: column;
       justify-content: space-between;
@@ -177,6 +179,34 @@
       50% { box-shadow: 0 0 0 10px rgba(245, 158, 11, 0.75); border-color: #f59e0b !important; }
     }
 
+    /* Glossary Tooltip Style */
+    .sci-term {
+      position: relative;
+      border-bottom: 2px dotted #4f46e5;
+      color: #3730a3;
+      font-weight: 800;
+      cursor: help;
+    }
+    .sci-term:hover::after {
+      content: attr(data-desc);
+      position: absolute;
+      bottom: 125%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: max-content;
+      max-width: 260px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      background: #0f172a;
+      color: #f8fafc;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.4;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.4);
+      z-index: 50;
+      white-space: normal;
+    }
+
     .slide-page::-webkit-scrollbar {
       width: 6px;
     }
@@ -197,7 +227,7 @@
         <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800">통합과학2 · 실시간 참여 수업</span>
         <span id="entry-room-badge" class="text-xs font-mono font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg">방 코드: SCI2026</span>
       </div>
-      <h1 class="text-2xl font-black text-slate-900 mb-1">01. 과학 기술과 미래 사회</h1>
+      <h1 id="entry-lesson-title" class="text-2xl font-black text-slate-900 mb-1">01. 과학 기술과 미래 사회</h1>
       <p class="text-sm text-slate-500 mb-5">5자리 학번(예: 10205 → 1학년 2반 5번)과 이름을 입력하면 반별 대시보드에 자동 분류됩니다.</p>
 
       <div class="space-y-3 mb-6">
@@ -229,20 +259,25 @@
   <!-- ==========================================
        TOP NAVIGATION & CONTROL BAR
        ========================================== -->
-  <header class="h-16 bg-slate-900 border-b border-slate-800 px-3 md:px-5 flex items-center justify-between gap-2 z-40">
+  <header class="h-16 bg-slate-900 border-b border-slate-800 px-3 md:px-4 flex items-center justify-between gap-1.5 z-40">
     <!-- Left -->
     <div class="flex items-center gap-1.5">
       <span id="role-badge" class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-indigo-600 text-white">교사 모드</span>
       
-      <button id="switch-to-student-btn" type="button" onclick="openStudentEntryModal()" class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition cursor-pointer">
-        👨‍🎓 학생화면 전환
+      <!-- NEW: Teacher PDF Auto-Slide Generator Button -->
+      <button id="pdf-generator-btn" type="button" onclick="openPdfGeneratorModal()" class="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md transition cursor-pointer" title="학습지 PDF를 업로드하여 새 차시 슬라이드를 자동 생성합니다">
+        📄 PDF 슬라이드 자동생성
       </button>
 
-      <button id="qr-invite-btn" type="button" onclick="openQrInviteModal()" class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-md transition cursor-pointer">
-        📱 학생 초대 QR
+      <button id="switch-to-student-btn" type="button" onclick="openStudentEntryModal()" class="px-2 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 font-bold text-xs transition cursor-pointer">
+        👨‍🎓 학생전환
       </button>
 
-      <div class="hidden xl:flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 text-xs">
+      <button id="qr-invite-btn" type="button" onclick="openQrInviteModal()" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md transition cursor-pointer">
+        📱 초대 QR
+      </button>
+
+      <div class="hidden 2xl:flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 text-xs">
         <span id="conn-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         <span id="conn-status-text" class="text-slate-300 font-semibold">실시간 대기 중</span>
       </div>
@@ -253,21 +288,21 @@
       <button id="prev-slide-btn" type="button" onclick="changeSlide(-1)" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1 transition cursor-pointer">
         ◀ <span class="hidden sm:inline">이전</span>
       </button>
-      <div class="px-2.5 py-1 text-xs font-extrabold text-amber-400">
+      <div class="px-2 py-1 text-xs font-extrabold text-amber-400">
         <span id="current-slide-num">1</span> / <span id="total-slide-num">10</span>
       </div>
       <button id="next-slide-btn" type="button" onclick="changeSlide(1)" class="px-2.5 py-1.5 rounded-lg hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center gap-1 transition cursor-pointer">
         <span class="hidden sm:inline">다음</span> ▶
       </button>
-      <button id="sync-lock-btn" type="button" onclick="toggleSlideSyncLock()" class="hidden px-2.5 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold hover:bg-indigo-600/50 transition cursor-pointer">
-        🔒 화면동기화 ON
+      <button id="sync-lock-btn" type="button" onclick="toggleSlideSyncLock()" class="hidden px-2 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold hover:bg-indigo-600/50 transition cursor-pointer">
+        🔒 동기화 ON
       </button>
     </div>
 
     <!-- Right: Whiteboard, Student Wrong-Note & Teacher Analytics Dashboard -->
     <div class="flex items-center gap-1.5">
-      <div id="teacher-wb-bar" class="hidden md:flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
-        <button id="wb-toggle-btn" type="button" onclick="toggleWhiteboardMode()" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-700 text-slate-200 hover:bg-slate-600 transition cursor-pointer">
+      <div id="teacher-wb-bar" class="hidden lg:flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+        <button id="wb-toggle-btn" type="button" onclick="toggleWhiteboardMode()" class="px-2 py-1.5 rounded-lg text-xs font-bold bg-slate-700 text-slate-200 hover:bg-slate-600 transition cursor-pointer">
           ✏️ 판서 OFF
         </button>
         <div id="wb-tools" class="hidden items-center gap-1 pl-1 border-l border-slate-700">
@@ -279,20 +314,20 @@
         </div>
       </div>
 
-      <button id="teacher-reveal-slide-btn" type="button" onclick="revealCurrentSlideBlanks()" class="hidden sm:inline-flex px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-indigo-300 transition cursor-pointer">
-        교사화면 정답 표시
+      <button id="teacher-reveal-slide-btn" type="button" onclick="revealCurrentSlideBlanks()" class="hidden sm:inline-flex px-2 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-indigo-300 transition cursor-pointer">
+        교사정답표시
       </button>
       <button id="teacher-quiz-stat-btn" type="button" onclick="openQuizStatsModal()" class="hidden px-2.5 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-extrabold transition flex items-center gap-1 shadow cursor-pointer">
-        🏆 퀴즈 결과
+        🏆 퀴즈결과
       </button>
-      <button id="teacher-dashboard-btn" type="button" onclick="openTeacherDashboard()" class="hidden px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition flex items-center gap-1.5 shadow cursor-pointer">
-        📊 답안 수합·분석 (<span id="student-count-badge">0</span>)
+      <button id="teacher-dashboard-btn" type="button" onclick="openTeacherDashboard()" class="hidden px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition flex items-center gap-1 shadow cursor-pointer">
+        📊 답안·분석 (<span id="student-count-badge">0</span>)
       </button>
 
       <!-- Student Only Actions -->
       <div id="student-top-actions" class="hidden items-center gap-1.5">
         <div class="text-xs font-bold text-slate-300 hidden lg:block">
-          빈칸: <span id="student-score-live" class="text-emerald-400 font-extrabold">0</span>/58 · 퀴즈: <span id="student-quiz-live" class="text-amber-400 font-extrabold">채점전</span>
+          빈칸: <span id="student-score-live" class="text-emerald-400 font-extrabold">0</span>/<span class="total-blanks- inline-total-blanks">58</span> · 퀴즈: <span id="student-quiz-live" class="text-amber-400 font-extrabold">채점전</span>
         </div>
         <button type="button" onclick="openStudentWrongNoteModal()" class="px-2.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow transition cursor-pointer flex items-center gap-1">
           📓 오답노트·피드백 <span id="feedback-unread-dot" class="hidden w-2 h-2 rounded-full bg-rose-600 animate-ping"></span>
@@ -311,660 +346,760 @@
     <div id="slide-stage">
       <canvas id="whiteboard-canvas"></canvas>
 
-      <!-- SLIDE 1: 표지 및 학습 목표 -->
-      <section class="slide-page active" data-slide="0">
-        <div>
-          <div class="flex flex-wrap items-center justify-between gap-2 pb-4 border-b-2 border-slate-900">
-            <div class="flex items-center gap-2">
-              <span class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-black text-xs">물리 · 통합과학2</span>
-              <span class="text-sm font-bold text-slate-600">Ⅲ. 과학과 미래 사회 | 2. 과학 기술의 발전과 쟁점</span>
-            </div>
-            <span id="lesson-id-badge" class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">4차시 · 교과서 p.126~131</span>
-          </div>
+      <!-- Container for Default & Dynamically Generated PDF Slides -->
+      <div id="slides-container" class="w-full h-full">
 
-          <div class="mt-6 bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-3xl p-8 shadow-xl">
-            <p class="text-indigo-300 font-extrabold text-sm mb-2">01. 과학 기술과 미래 사회</p>
-            <h2 class="text-3xl md:text-4xl font-black tracking-tight mb-6">과학 기술의 발전과 미래 사회의 변화</h2>
-            <div class="bg-white/10 backdrop-blur rounded-2xl p-5 border border-white/15 space-y-3">
-              <div class="text-xs font-extrabold uppercase tracking-wider text-amber-300">이번 시간 학습 목표</div>
-              <div class="flex items-start gap-3">
-                <span class="w-6 h-6 rounded-full bg-amber-400 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
-                <p class="text-base md:text-lg font-bold leading-snug">인공지능 로봇, 사물 인터넷 등과 같이 과학 기술의 발전을 인간 삶과 환경 개선에 활용하는 사례를 찾을 수 있다.</p>
+        <!-- SLIDE 1: 표지 및 학습 목표 -->
+        <section class="slide-page active" data-slide="0">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b-2 border-slate-900">
+              <div class="flex items-center gap-2">
+                <span class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-black text-xs">물리 · 통합과학2 (10~12학년)</span>
+                <span class="text-sm font-bold text-slate-600">Ⅲ. 과학과 미래 사회 | 2. 과학 기술의 발전과 쟁점</span>
               </div>
-              <div class="flex items-start gap-3">
-                <span class="w-6 h-6 rounded-full bg-amber-400 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
-                <p class="text-base md:text-lg font-bold leading-snug">과학 기술의 발전이 미래 사회에 미치는 유용성과 한계를 예측할 수 있다.</p>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-extrabold">블룸: 이해·분석·평가</span>
+                <span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold">DOK Level 1~3</span>
+                <span class="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-lg">4차시 · 교과서 p.126~131</span>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
-          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-            <div>
-              <div class="text-xs font-bold text-indigo-600">PART 01</div>
-              <div class="font-extrabold text-slate-800">과학 기술의 발전과 IoT</div>
-              <div class="text-xs text-slate-500 mt-0.5">산업 시대 vs 지능정보화 시대</div>
+            <div class="mt-5 bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-3xl p-7 shadow-xl">
+              <p class="text-indigo-300 font-extrabold text-sm mb-1">01. 과학 기술과 미래 사회</p>
+              <h2 class="text-3xl md:text-4xl font-black tracking-tight mb-5">과학 기술의 발전과 미래 사회의 변화</h2>
+              <div class="bg-white/10 backdrop-blur rounded-2xl p-5 border border-white/15 space-y-3">
+                <div class="text-xs font-extrabold uppercase tracking-wider text-amber-300">이번 시간 학습 목표</div>
+                <div class="flex items-start gap-3">
+                  <span class="w-6 h-6 rounded-full bg-amber-400 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
+                  <p class="text-base md:text-lg font-bold leading-snug">인공지능 로봇, 사물 인터넷 등과 같이 과학 기술의 발전을 인간 삶과 환경 개선에 활용하는 사례를 찾을 수 있다.</p>
+                </div>
+                <div class="flex items-start gap-3">
+                  <span class="w-6 h-6 rounded-full bg-amber-400 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
+                  <p class="text-base md:text-lg font-bold leading-snug">과학 기술의 발전이 미래 사회에 미치는 유용성과 한계를 예측할 수 있다.</p>
+                </div>
+              </div>
             </div>
-            <span class="text-2xl">📡</span>
-          </div>
-          <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-            <div>
-              <div class="text-xs font-bold text-indigo-600">PART 02</div>
-              <div class="font-extrabold text-slate-800">인공지능과 로봇 · 유용성과 한계</div>
-              <div class="text-xs text-slate-500 mt-0.5">총 58개 핵심 빈칸 & 오답노트</div>
-            </div>
-            <span class="text-2xl">🤖</span>
-          </div>
-          <div onclick="openStudentEntryModal()" class="p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 flex items-center justify-between cursor-pointer transition">
-            <div>
-              <div class="text-xs font-extrabold text-emerald-700">학생이신가요?</div>
-              <div class="font-black text-slate-900">여기를 눌러 학번·이름 입력하기</div>
-              <div class="text-xs text-slate-600 mt-0.5">클릭 시 학생 입력 모드로 즉시 시작</div>
-            </div>
-            <span class="text-2xl">✍️</span>
-          </div>
-        </div>
-      </section>
-
-      <!-- SLIDE 2: ① 과학 기술의 발전 -->
-      <section class="slide-page" data-slide="1">
-        <div>
-          <div class="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h2 class="text-xl md:text-2xl font-black text-slate-900">① 과학 기술의 발전과 사물 인터넷 — 1. 과학 기술의 발전</h2>
-            <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">같은 문장 내 순서 바뀜·유사어 자동 인정</span>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-            <div class="rounded-2xl border-2 border-amber-200 bg-amber-50/60 p-6 flex flex-col justify-between">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+            <div onclick="openPdfGeneratorModal()" class="p-4 rounded-2xl bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 flex items-center justify-between cursor-pointer transition">
               <div>
-                <span class="inline-block px-3 py-1 rounded-full bg-amber-200 text-amber-900 font-extrabold text-xs mb-3">과거 ~ 산업화</span>
-                <h3 class="text-xl font-black text-slate-900 mb-4">(1) 산업 시대 과학 기술 발전 방향</h3>
-                <p class="text-base md:text-lg leading-loose font-medium text-slate-800 bg-white p-5 rounded-xl border border-amber-200 shadow-sm">
-                  <span class="blank-slot" data-id="1" data-slide="1" data-group="ind-resource" data-ans="지하자원" data-alt="지하 자원,광물자원"></span>이나
-                  <span class="blank-slot" data-id="2" data-slide="1" data-group="ind-resource" data-ans="천연자원" data-alt="천연 자원,자연자원"></span>을 채취하여
-                  <span class="blank-slot" data-id="3" data-slide="1" data-ans="물질" data-alt="원료,소재"></span>을 추출하고 이를 활용하는
-                  <span class="blank-slot" data-id="4" data-slide="1" data-ans="물품" data-alt="제품,상품,물건"></span> 제조 기술로 발전
+                <div class="text-xs font-extrabold text-rose-700">교사용 AI 슬라이드 빌더</div>
+                <div class="font-black text-slate-900">📄 학습지 PDF로 새 수업 자동 생성</div>
+                <div class="text-xs text-slate-600 mt-0.5">클릭하여 다른 차시 PDF 업로드</div>
+              </div>
+              <span class="text-2xl">✨</span>
+            </div>
+            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+              <div>
+                <div class="text-xs font-bold text-indigo-600">과학 탐구 및 차별화 설계</div>
+                <div class="font-extrabold text-slate-800">기본·심화 과제 + 탐구 흐름 발문</div>
+                <div class="text-xs text-slate-500 mt-0.5">총 58개 빈칸 · 5문항 확인 퀴즈</div>
+              </div>
+              <span class="text-2xl">🔬</span>
+            </div>
+            <div onclick="openStudentEntryModal()" class="p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 flex items-center justify-between cursor-pointer transition">
+              <div>
+                <div class="text-xs font-extrabold text-emerald-700">학생이신가요?</div>
+                <div class="font-black text-slate-900">여기를 눌러 학번·이름 입력하기</div>
+                <div class="text-xs text-slate-600 mt-0.5">클릭 시 학생 입력 모드로 즉시 시작</div>
+              </div>
+              <span class="text-2xl">✍️</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- SLIDE 2: ① 과학 기술의 발전 -->
+        <section class="slide-page" data-slide="1">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">① 과학 기술의 발전과 사물 인터넷 — 1. 과학 기술의 발전</h2>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-xs font-extrabold">블룸: 이해·비교</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold">DOK 1 (핵심 개념 확인)</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+              <div class="rounded-2xl border-2 border-amber-200 bg-amber-50/60 p-5 flex flex-col justify-between">
+                <div>
+                  <span class="inline-block px-3 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold text-xs mb-2">과거 ~ 산업화 · 기본 문항</span>
+                  <h3 class="text-lg font-black text-slate-900 mb-3">(1) 산업 시대 과학 기술 발전 방향</h3>
+                  <p class="text-sm md:text-base leading-loose font-medium text-slate-800 bg-white p-4 rounded-xl border border-amber-200 shadow-sm">
+                    <span class="blank-slot" data-id="1" data-slide="1" data-group="ind-resource" data-ans="지하자원" data-alt="지하 자원,광물자원"></span>이나
+                    <span class="blank-slot" data-id="2" data-slide="1" data-group="ind-resource" data-ans="천연자원" data-alt="천연 자원,자연자원"></span>을 채취하여
+                    <span class="blank-slot" data-id="3" data-slide="1" data-ans="물질" data-alt="원료,소재"></span>을 추출하고 이를 활용하는
+                    <span class="blank-slot" data-id="4" data-slide="1" data-ans="물품" data-alt="제품,상품,물건"></span> 제조 기술로 발전
+                  </p>
+                </div>
+                <div class="mt-3 flex items-center justify-between text-xs font-bold text-amber-900 bg-amber-100/80 px-4 py-2.5 rounded-xl">
+                  <span>⛏️ 자원 채취</span><span>→</span><span>🧪 물질 추출</span><span>→</span><span>🏭 물품 제조</span>
+                </div>
+              </div>
+
+              <div class="rounded-2xl border-2 border-indigo-200 bg-indigo-50/60 p-5 flex flex-col justify-between">
+                <div>
+                  <span class="inline-block px-3 py-0.5 rounded-full bg-indigo-200 text-indigo-900 font-extrabold text-xs mb-2">현재 ~ 미래 사회 · 기본 문항</span>
+                  <h3 class="text-lg font-black text-slate-900 mb-3">(2) <span class="sci-term" data-desc="인공지능, 빅데이터, 사물인터넷 등 지능정보기술이 사회 전반에 융합되는 시대">지능정보화 시대</span> 과학 기술 발전 방향</h3>
+                  <p class="text-sm md:text-base leading-loose font-medium text-slate-800 bg-white p-4 rounded-xl border border-indigo-200 shadow-sm">
+                    인간과 자연에 관한
+                    <span class="blank-slot" data-id="5" data-slide="1" data-ans="데이터" data-alt="빅데이터,자료"></span>에서
+                    <span class="blank-slot" data-id="6" data-slide="1" data-ans="정보" data-alt="지식,유용한정보"></span>를 추출하고 이를 활용하는
+                    <span class="blank-slot" data-id="7" data-slide="1" data-ans="인공지능" data-alt="AI,인공 지능"></span> 기술로 발전
+                  </p>
+                </div>
+                <div class="mt-3 flex items-center justify-between text-xs font-bold text-indigo-900 bg-indigo-100/80 px-4 py-2.5 rounded-xl">
+                  <span>📊 데이터 축적</span><span>→</span><span>💡 정보 추출</span><span>→</span><span>🧠 인공지능 기술</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inquiry Prompt & Differentiation Box -->
+          <div class="p-3.5 rounded-xl bg-slate-900 text-white text-xs flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black mr-1.5">🔬 과학 탐구 발문 [관찰·비교]</span>
+              <span>산업 시대의 '지하자원'과 지능정보화 시대의 '데이터'는 부가가치를 창출하는 과정에서 어떤 공통점과 차이점이 있을까?</span>
+            </div>
+            <span class="font-bold text-slate-400">Slide 2 / 10</span>
+          </div>
+        </section>
+
+        <!-- SLIDE 3: 2. 사물 인터넷 기술 -->
+        <section class="slide-page" data-slide="2">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">① 과학 기술의 발전과 사물 인터넷 — 2. 사물 인터넷(IoT) 기술</h2>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-extrabold">블룸: 이해·적용</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold">DOK 2 (원리 적용)</span>
+              </div>
+            </div>
+
+            <div class="mt-3 bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
+              <h3 class="text-base font-extrabold text-indigo-900">(1) <span class="sci-term" data-desc="Internet of Things: 각종 사물에 센서와 통신 기능을 내장하여 인터넷에 연결하는 기술">사물 인터넷</span> 기술의 개념과 원리</h3>
+              <div class="flex items-start gap-2 text-base leading-loose">
+                <span class="font-black text-indigo-600 mt-1">①</span>
+                <p>
+                  사물에 <span class="blank-slot" data-id="8" data-slide="2" data-group="iot-parts" data-ans="센서" data-alt="감지기"></span>,
+                  <span class="blank-slot" data-id="9" data-slide="2" data-group="iot-parts" data-ans="통신 기능" data-alt="통신기능,통신,네트워크기능"></span>,
+                  <span class="blank-slot" data-id="10" data-slide="2" data-group="iot-parts" data-ans="소프트웨어" data-alt="SW,프로그램"></span> 내장 <span class="text-xs text-slate-400 font-semibold">(※ 3가지 순서 무관 · 기본)</span>
                 </p>
               </div>
-              <div class="mt-5 flex items-center justify-between text-xs font-bold text-amber-900 bg-amber-100/80 px-4 py-3 rounded-xl">
-                <span>⛏️ 자원 채취</span><span>→</span><span>🧪 물질 추출</span><span>→</span><span>🏭 물품 제조</span>
-              </div>
-            </div>
-
-            <div class="rounded-2xl border-2 border-indigo-200 bg-indigo-50/60 p-6 flex flex-col justify-between">
-              <div>
-                <span class="inline-block px-3 py-1 rounded-full bg-indigo-200 text-indigo-900 font-extrabold text-xs mb-3">현재 ~ 미래 사회</span>
-                <h3 class="text-xl font-black text-slate-900 mb-4">(2) 지능정보화 시대 과학 기술 발전 방향</h3>
-                <p class="text-base md:text-lg leading-loose font-medium text-slate-800 bg-white p-5 rounded-xl border border-indigo-200 shadow-sm">
-                  인간과 자연에 관한
-                  <span class="blank-slot" data-id="5" data-slide="1" data-ans="데이터" data-alt="빅데이터,자료"></span>에서
-                  <span class="blank-slot" data-id="6" data-slide="1" data-ans="정보" data-alt="지식,유용한정보"></span>를 추출하고 이를 활용하는
-                  <span class="blank-slot" data-id="7" data-slide="1" data-ans="인공지능" data-alt="AI,인공 지능"></span> 기술로 발전
+              <div class="flex items-start gap-2 text-base leading-loose">
+                <span class="font-black text-indigo-600 mt-1">②</span>
+                <p>
+                  <span class="blank-slot" data-id="11" data-slide="2" data-ans="인터넷" data-alt="네트워크,통신망"></span>에 연결된 사물과 주변 환경의
+                  <span class="blank-slot" data-id="12" data-slide="2" data-ans="데이터" data-alt="정보,자료"></span>를 실시간으로 주고받아 사용자가
+                  <span class="blank-slot" data-id="13" data-slide="2" data-ans="원격" data-alt="멀리서,비대면"></span>으로 사물의
+                  <span class="blank-slot" data-id="14" data-slide="2" data-group="iot-act" data-ans="상태 파악" data-alt="상태파악,상태확인,모니터링"></span> 및
+                  <span class="blank-slot" data-id="15" data-slide="2" data-group="iot-act" data-ans="제어" data-alt="조작,조절,통제,관리"></span> <span class="text-xs text-rose-500 font-bold">(심화)</span>
                 </p>
               </div>
-              <div class="mt-5 flex items-center justify-between text-xs font-bold text-indigo-900 bg-indigo-100/80 px-4 py-3 rounded-xl">
-                <span>📊 데이터 축적</span><span>→</span><span>💡 정보 추출</span><span>→</span><span>🧠 인공지능 기술</span>
+            </div>
+
+            <div class="mt-4 bg-slate-900 text-white rounded-2xl p-4">
+              <div class="flex items-center justify-between mb-2.5">
+                <span class="text-xs font-extrabold text-amber-400 uppercase tracking-wider">⚡ 사물 인터넷 작동 3단계 시뮬레이터 (단계를 클릭해 보세요)</span>
+                <span id="iot-step-caption" class="text-xs text-slate-300">사물에 내장된 센서가 주변 데이터를 수집합니다.</span>
+              </div>
+              <div class="grid grid-cols-3 gap-3">
+                <button type="button" onclick="highlightIotStep(1)" id="iot-step-1" class="p-3 rounded-xl bg-indigo-600/40 border-2 border-indigo-400 text-left transition">
+                  <div class="text-xs font-bold text-indigo-300">STEP 1. 감지 (센서)</div>
+                  <div class="font-extrabold text-sm mt-0.5">주변 환경 데이터 수집</div>
+                  <div class="text-[11px] text-slate-300 mt-0.5">온도·습도·위치·생체신호 측정</div>
+                </button>
+                <button type="button" onclick="highlightIotStep(2)" id="iot-step-2" class="p-3 rounded-xl bg-slate-800 border-2 border-slate-700 text-left transition">
+                  <div class="text-xs font-bold text-emerald-300">STEP 2. 연결 (통신·인터넷)</div>
+                  <div class="font-extrabold text-sm mt-0.5">실시간 데이터 송수신</div>
+                  <div class="text-[11px] text-slate-300 mt-0.5">사물 ↔ 클라우드 ↔ 스마트폰</div>
+                </button>
+                <button type="button" onclick="highlightIotStep(3)" id="iot-step-3" class="p-3 rounded-xl bg-slate-800 border-2 border-slate-700 text-left transition">
+                  <div class="text-xs font-bold text-amber-300">STEP 3. 활용 (소프트웨어)</div>
+                  <div class="font-extrabold text-sm mt-0.5">원격 상태 파악 및 자동 제어</div>
+                  <div class="text-[11px] text-slate-300 mt-0.5">자동 급수, 조명 제어, 원격 진료</div>
+                </button>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="p-4 rounded-xl bg-slate-100 border border-slate-200 text-xs md:text-sm text-slate-600 flex items-center justify-between">
-          <span>💡 <strong>핵심 비교:</strong> 산업 시대의 핵심 원천이 <strong>자원(물질)</strong>이었다면, 지능정보화 시대의 핵심 원천은 <strong>데이터(정보)</strong>입니다.</span>
-          <span class="font-bold text-slate-500">Slide 2 / 10</span>
-        </div>
-      </section>
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-700 flex justify-between">
+            <span>🔬 <strong>탐구 발문 [가설 설정]:</strong> 만약 교실 창문과 에어컨에 IoT 센서를 부착한다면 어떤 데이터를 수집해 어떻게 자동 제어할 수 있을까?</span>
+            <span class="font-bold">Slide 3 / 10</span>
+          </div>
+        </section>
 
-      <!-- SLIDE 3: 2. 사물 인터넷 기술 -->
-      <section class="slide-page" data-slide="2">
-        <div>
-          <div class="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h2 class="text-xl md:text-2xl font-black text-slate-900">① 과학 기술의 발전과 사물 인터넷 — 2. 사물 인터넷(IoT) 기술</h2>
-            <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">Internet of Things</span>
+        <!-- SLIDE 4: (2) 사물 인터넷 기술 활용 분야 -->
+        <section class="slide-page" data-slide="3">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">① 과학 기술의 발전과 사물 인터넷 — (2) 사물 인터넷 활용 분야</h2>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-xs font-extrabold">블룸: 적용·분석</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold">DOK 2 (사례 분석)</span>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mt-3">
+              <div class="lg:col-span-8 overflow-hidden rounded-2xl border border-slate-200">
+                <table class="w-full text-left border-collapse text-xs md:text-sm">
+                  <thead>
+                    <tr class="bg-slate-800 text-white">
+                      <th class="py-2 px-3 w-28 font-extrabold">활용 분야</th>
+                      <th class="py-2 px-3 font-extrabold">실시간 데이터 수집 및 제어 내용</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-200 bg-white">
+                    <tr onclick="selectSmartDomain('farm')" class="hover:bg-indigo-50/70 cursor-pointer">
+                      <td class="py-2 px-3 font-extrabold text-emerald-700 bg-emerald-50/50">🌱 스마트팜</td>
+                      <td class="py-2 px-3">온도, 습도, 토양 상태, 작물의 성장 등을 실시간으로 파악하여 자동으로 물과 영양분 공급</td>
+                    </tr>
+                    <tr onclick="selectSmartDomain('home')" class="hover:bg-indigo-50/70 cursor-pointer">
+                      <td class="py-2 px-3 font-extrabold text-indigo-700 bg-indigo-50/50">🏠 스마트 홈</td>
+                      <td class="py-2 px-3">집 안의 조명, 온도, 보안 장치 등을 실시간 관리 및 제어</td>
+                    </tr>
+                    <tr onclick="selectSmartDomain('med')" class="hover:bg-indigo-50/70 cursor-pointer">
+                      <td class="py-2 px-3 font-extrabold text-rose-700 bg-rose-50/50">🏥 스마트 의료</td>
+                      <td class="py-2 px-3">원격 모니터링 기기로 환자의 건강 상태를 실시간 추적 관리</td>
+                    </tr>
+                    <tr onclick="selectSmartDomain('traffic')" class="hover:bg-indigo-50/70 cursor-pointer">
+                      <td class="py-2 px-3 font-extrabold text-amber-700 bg-amber-50/50">🚦 스마트 교통</td>
+                      <td class="py-2 px-3"><span class="sci-term" data-desc="ITS: 교통 수단 및 교통 시설에 첨단 정보통신 기술을 적용하여 실시간 교통 정보를 제공하는 시스템">지능형 교통 체계</span>로 수집한 교통 정보 실시간 제공</td>
+                    </tr>
+                    <tr onclick="selectSmartDomain('city')" class="hover:bg-indigo-50/70 cursor-pointer">
+                      <td class="py-2 px-3 font-extrabold text-cyan-700 bg-cyan-50/50">🏙️ 스마트 도시</td>
+                      <td class="py-2 px-3">공기의 질, 수질, 에너지 사용 등을 실시간 관리</td>
+                    </tr>
+                    <tr onclick="selectSmartDomain('logi')" class="hover:bg-indigo-50/70 cursor-pointer">
+                      <td class="py-2 px-3 font-extrabold text-purple-700 bg-purple-50/50">🚚 스마트 물류</td>
+                      <td class="py-2 px-3">
+                        <span class="blank-slot" data-id="16" data-slide="3" data-ans="운송" data-alt="배송,배달,화물"></span> 차량의 위치를 실시간으로 추적하고 소비자의 주문 유형과
+                        <span class="blank-slot" data-id="17" data-slide="3" data-ans="재고" data-alt="상품재고,창고재고"></span> 물량 파악
+                      </td>
+                    </tr>
+                    <tr onclick="selectSmartDomain('factory')" class="hover:bg-indigo-50/70 cursor-pointer">
+                      <td class="py-2 px-3 font-extrabold text-slate-800 bg-slate-100">🏭 스마트 공장</td>
+                      <td class="py-2 px-3">생산 기계를 실시간으로 관리하고 재고 물량을 바탕으로 제품을 생산하여 생산 과정 효율성 증대</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="lg:col-span-4 bg-slate-900 text-white rounded-2xl p-5 flex flex-col justify-between">
+                <div>
+                  <span class="text-[11px] font-extrabold text-amber-400 uppercase">IoT 실시간 흐름 분석</span>
+                  <h3 id="smart-card-title" class="text-xl font-black mt-1 mb-3">🚚 스마트 물류</h3>
+                  <div class="space-y-2.5 text-xs">
+                    <div class="p-3 rounded-xl bg-slate-800 border border-slate-700">
+                      <div class="text-indigo-300 font-bold mb-1">1. 센서 감지 데이터</div>
+                      <div id="smart-card-sensor" class="font-semibold text-slate-100">GPS 운송 차량 위치, 바코드/RFID 창고 재고 수량, 주문 데이터</div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-slate-800 border border-slate-700">
+                      <div class="text-emerald-300 font-bold mb-1">2. 원격 상태 파악 및 제어</div>
+                      <div id="smart-card-control" class="font-semibold text-slate-100">실시간 배송 경로 최적화 및 부족한 재고 자동 발주</div>
+                    </div>
+                  </div>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-3">표의 각 행을 클릭하면 분야별 센서·제어 사례를 비교할 수 있습니다.</p>
+              </div>
+            </div>
           </div>
 
-          <div class="mt-4 bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-4">
-            <h3 class="text-base font-extrabold text-indigo-900">(1) 사물 인터넷 기술의 개념과 원리</h3>
-            <div class="flex items-start gap-2 text-base md:text-lg leading-loose">
-              <span class="font-black text-indigo-600 mt-1">①</span>
-              <p>
-                사물에 <span class="blank-slot" data-id="8" data-slide="2" data-group="iot-parts" data-ans="센서" data-alt="감지기"></span>,
-                <span class="blank-slot" data-id="9" data-slide="2" data-group="iot-parts" data-ans="통신 기능" data-alt="통신기능,통신,네트워크기능"></span>,
-                <span class="blank-slot" data-id="10" data-slide="2" data-group="iot-parts" data-ans="소프트웨어" data-alt="SW,프로그램"></span> 내장 <span class="text-xs text-slate-400 font-semibold">(※ 3가지 순서 무관)</span>
-              </p>
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-700 flex justify-between">
+            <span>🔬 <strong>탐구 발문 [자료 분석]:</strong> 스마트 물류와 스마트 공장이 서로 데이터를 실시간으로 연동할 때 에너지와 자원 낭비를 어떻게 줄일 수 있을까?</span>
+            <span class="font-bold">Slide 4 / 10</span>
+          </div>
+        </section>
+
+        <!-- SLIDE 5: ② 과학 기술의 발전과 인공지능 로봇 -->
+        <section class="slide-page" data-slide="4">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">② 과학 기술의 발전과 인공지능 로봇 — 1. 인공지능 로봇</h2>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-xs font-extrabold">블룸: 이해·적용</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold">DOK 2 (기술 구조 이해)</span>
+              </div>
             </div>
-            <div class="flex items-start gap-2 text-base md:text-lg leading-loose">
-              <span class="font-black text-indigo-600 mt-1">②</span>
-              <p>
-                <span class="blank-slot" data-id="11" data-slide="2" data-ans="인터넷" data-alt="네트워크,통신망"></span>에 연결된 사물과 주변 환경의
-                <span class="blank-slot" data-id="12" data-slide="2" data-ans="데이터" data-alt="정보,자료"></span>를 실시간으로 주고받아 사용자가
-                <span class="blank-slot" data-id="13" data-slide="2" data-ans="원격" data-alt="멀리서,비대면"></span>으로 사물의
-                <span class="blank-slot" data-id="14" data-slide="2" data-group="iot-act" data-ans="상태 파악" data-alt="상태파악,상태확인,모니터링"></span> 및
-                <span class="blank-slot" data-id="15" data-slide="2" data-group="iot-act" data-ans="제어" data-alt="조작,조절,통제,관리"></span>
-              </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-3">
+              <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2.5">
+                <h3 class="text-lg font-black text-indigo-900">(1) 인공지능 기술 <span class="text-xs font-bold text-indigo-600">[기본·심화]</span></h3>
+                <p class="text-sm md:text-base font-semibold leading-relaxed">
+                  ① <span class="blank-slot" data-id="18" data-slide="4" data-ans="빅데이터" data-alt="빅 데이터,방대한데이터,대용량데이터"></span>를 학습하고 분석하는 기술을 바탕으로 다양하게 활용
+                </p>
+                <div class="bg-white rounded-xl p-3.5 border border-slate-200 space-y-2 text-sm leading-relaxed">
+                  <div class="text-xs font-extrabold text-indigo-600">대표 활용 사례 (ex)</div>
+                  <p>• 사람의 말, 글, 그림 등을 입력하여 다양한 형식의
+                    <span class="blank-slot" data-id="19" data-slide="4" data-group="ai-gen" data-ans="문서" data-alt="글,텍스트"></span>,
+                    <span class="blank-slot" data-id="20" data-slide="4" data-group="ai-gen" data-ans="음악" data-alt="노래,오디오,소리"></span>,
+                    <span class="blank-slot" data-id="21" data-slide="4" data-group="ai-gen" data-ans="그림" data-alt="이미지,사진,영상"></span> 등을 제작
+                  </p>
+                  <p>• 기존 데이터의 추이를
+                    <span class="blank-slot" data-id="22" data-slide="4" data-ans="분석" data-alt="파악,학습"></span>하여 미래 변화
+                    <span class="blank-slot" data-id="23" data-slide="4" data-ans="예측" data-alt="예상,전망"></span>
+                  </p>
+                  <p>• 주변 상황을 인식하고 스스로 구동 장치를
+                    <span class="blank-slot" data-id="24" data-slide="4" data-ans="제어" data-alt="조작,조절"></span>하는
+                    <span class="blank-slot" data-id="25" data-slide="4" data-ans="자율주행" data-alt="자율 주행,무인자율주행"></span> 자동차 개발
+                  </p>
+                </div>
+              </div>
+
+              <div class="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2.5">
+                <h3 class="text-lg font-black text-emerald-900">(2) 인공지능 로봇 <span class="text-xs font-bold text-emerald-600">[기본·심화]</span></h3>
+                <p class="text-sm md:text-base font-semibold leading-relaxed">
+                  ① <span class="blank-slot" data-id="26" data-slide="4" data-group="robot-core" data-ans="인공지능 기술" data-alt="인공지능기술,인공지능,AI기술,AI"></span>,
+                  <span class="blank-slot" data-id="27" data-slide="4" data-group="robot-core" data-ans="반도체" data-alt="칩,인공지능반도체"></span>,
+                  <span class="blank-slot" data-id="28" data-slide="4" data-group="robot-core" data-ans="센서" data-alt="감지기"></span> 등을 활용하여 자율적으로 행동하는 로봇
+                </p>
+                <div class="bg-white rounded-xl p-3.5 border border-slate-200 space-y-2 text-sm leading-relaxed">
+                  <div class="text-xs font-extrabold text-emerald-700">특징 및 활용 분야 (ex)</div>
+                  <p>• 주변 상황을 인식하여
+                    <span class="blank-slot" data-id="29" data-slide="4" data-ans="자율적" data-alt="스스로,자동"></span>으로 작업을 수행하는 로봇 : 인간과
+                    <span class="blank-slot" data-id="30" data-slide="4" data-ans="상호작용" data-alt="상호 작용,소통,협업,협력"></span>하여 작업 보조
+                  </p>
+                  <p>• 작업 환경과 목표에 따라
+                    <span class="blank-slot" data-id="31" data-slide="4" data-group="robot-form" data-ans="크기" data-alt="규모,사이즈"></span>,
+                    <span class="blank-slot" data-id="32" data-slide="4" data-group="robot-form" data-ans="형태" data-alt="모양,외형,모습"></span>,
+                    <span class="blank-slot" data-id="33" data-slide="4" data-group="robot-form" data-ans="작동 방식" data-alt="작동방식,구동방식,움직임"></span>을 달리하여 일상생활뿐만 아니라 문화·예술, 산업 현장, 우주 탐사 등 다양한 분야에서 활용
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="mt-5 bg-slate-900 text-white rounded-2xl p-5">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-extrabold text-amber-400 uppercase tracking-wider">⚡ 사물 인터넷 작동 3단계 시뮬레이터 (단계를 클릭해 보세요)</span>
-              <span id="iot-step-caption" class="text-xs text-slate-300">사물에 내장된 센서가 주변 데이터를 수집합니다.</span>
-            </div>
-            <div class="grid grid-cols-3 gap-3">
-              <button type="button" onclick="highlightIotStep(1)" id="iot-step-1" class="p-3.5 rounded-xl bg-indigo-600/40 border-2 border-indigo-400 text-left transition">
-                <div class="text-xs font-bold text-indigo-300">STEP 1. 감지 (센서)</div>
-                <div class="font-extrabold text-sm mt-1">주변 환경 데이터 수집</div>
-                <div class="text-[11px] text-slate-300 mt-1">온도·습도·위치·생체신호 측정</div>
-              </button>
-              <button type="button" onclick="highlightIotStep(2)" id="iot-step-2" class="p-3.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-left transition">
-                <div class="text-xs font-bold text-emerald-300">STEP 2. 연결 (통신·인터넷)</div>
-                <div class="font-extrabold text-sm mt-1">실시간 데이터 송수신</div>
-                <div class="text-[11px] text-slate-300 mt-1">사물 ↔ 클라우드 ↔ 스마트폰</div>
-              </button>
-              <button type="button" onclick="highlightIotStep(3)" id="iot-step-3" class="p-3.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-left transition">
-                <div class="text-xs font-bold text-amber-300">STEP 3. 활용 (소프트웨어)</div>
-                <div class="font-extrabold text-sm mt-1">원격 상태 파악 및 자동 제어</div>
-                <div class="text-[11px] text-slate-300 mt-1">자동 급수, 조명 제어, 원격 진료</div>
-              </button>
-            </div>
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-700 flex justify-between">
+            <span>🔬 <strong>탐구 발문 [실험 설계]:</strong> 재난 현장에 투입할 인공지능 로봇을 설계한다면 어떤 센서와 형태(크기·작동 방식)가 가장 유리할까?</span>
+            <span class="font-bold">Slide 5 / 10</span>
           </div>
-        </div>
+        </section>
 
-        <div class="p-3.5 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex justify-between">
-          <span>📌 사물 인터넷의 3대 핵심 요소: <strong>센서 + 통신 기능 + 소프트웨어</strong></span>
-          <span class="font-bold">Slide 3 / 10</span>
-        </div>
-      </section>
+        <!-- SLIDE 6: ③ 과학 기술의 유용성 -->
+        <section class="slide-page" data-slide="5">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">③ 과학 기술의 유용성과 한계 — (1) 과학 기술의 유용성</h2>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-xs font-extrabold">블룸: 적용·분석</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold">DOK 2 (분야별 융합)</span>
+              </div>
+            </div>
 
-      <!-- SLIDE 4: (2) 사물 인터넷 기술 활용 분야 -->
-      <section class="slide-page" data-slide="3">
-        <div>
-          <div class="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h2 class="text-xl md:text-2xl font-black text-slate-900">① 과학 기술의 발전과 사물 인터넷 — (2) 사물 인터넷 활용 분야</h2>
-            <span class="text-xs font-bold text-slate-500">각 분야를 클릭하면 우측에 작동 원리가 표시됩니다</span>
-          </div>
+            <div class="mt-2 p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 text-xs md:text-sm font-semibold">
+              • 미래 사회의 다양한 분야에서 활용될 과학 기술(ex, 순서 무관):
+              <span class="blank-slot" data-id="34" data-slide="5" data-group="tech5" data-ans="사물 인터넷" data-alt="사물인터넷,IoT"></span>,
+              <span class="blank-slot" data-id="35" data-slide="5" data-group="tech5" data-ans="빅데이터" data-alt="빅 데이터"></span>,
+              <span class="blank-slot" data-id="36" data-slide="5" data-group="tech5" data-ans="인공지능" data-alt="인공 지능,AI"></span>,
+              <span class="blank-slot" data-id="37" data-slide="5" data-group="tech5" data-ans="로봇" data-alt="로봇기술,인공지능로봇"></span>,
+              <span class="blank-slot" data-id="38" data-slide="5" data-group="tech5" data-ans="가상 현실" data-alt="가상현실,VR"></span>
+            </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mt-4">
-            <div class="lg:col-span-8 overflow-hidden rounded-2xl border border-slate-200">
+            <div class="mt-2.5 overflow-hidden rounded-2xl border border-slate-200">
               <table class="w-full text-left border-collapse text-xs md:text-sm">
                 <thead>
                   <tr class="bg-slate-800 text-white">
-                    <th class="py-2.5 px-3 w-28 font-extrabold">활용 분야</th>
-                    <th class="py-2.5 px-3 font-extrabold">실시간 데이터 수집 및 제어 내용</th>
+                    <th class="py-2 px-3 w-24 font-extrabold">분야</th>
+                    <th class="py-2 px-3 font-extrabold">핵심 과학 기술 및 미래 사회 활용 모습</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200 bg-white">
-                  <tr onclick="selectSmartDomain('farm')" class="hover:bg-indigo-50/70 cursor-pointer">
-                    <td class="py-2 px-3 font-extrabold text-emerald-700 bg-emerald-50/50">🌱 스마트팜</td>
-                    <td class="py-2 px-3">온도, 습도, 토양 상태, 작물의 성장 등을 실시간으로 파악하여 자동으로 물과 영양분 공급</td>
-                  </tr>
-                  <tr onclick="selectSmartDomain('home')" class="hover:bg-indigo-50/70 cursor-pointer">
-                    <td class="py-2 px-3 font-extrabold text-indigo-700 bg-indigo-50/50">🏠 스마트 홈</td>
-                    <td class="py-2 px-3">집 안의 조명, 온도, 보안 장치 등을 실시간 관리 및 제어</td>
-                  </tr>
-                  <tr onclick="selectSmartDomain('med')" class="hover:bg-indigo-50/70 cursor-pointer">
-                    <td class="py-2 px-3 font-extrabold text-rose-700 bg-rose-50/50">🏥 스마트 의료</td>
-                    <td class="py-2 px-3">원격 모니터링 기기로 환자의 건강 상태를 실시간 추적 관리</td>
-                  </tr>
-                  <tr onclick="selectSmartDomain('traffic')" class="hover:bg-indigo-50/70 cursor-pointer">
-                    <td class="py-2 px-3 font-extrabold text-amber-700 bg-amber-50/50">🚦 스마트 교통</td>
-                    <td class="py-2 px-3">지능형 교통 체계로 수집한 교통 정보 실시간 제공</td>
-                  </tr>
-                  <tr onclick="selectSmartDomain('city')" class="hover:bg-indigo-50/70 cursor-pointer">
-                    <td class="py-2 px-3 font-extrabold text-cyan-700 bg-cyan-50/50">🏙️ 스마트 도시</td>
-                    <td class="py-2 px-3">공기의 질, 수질, 에너지 사용 등을 실시간 관리</td>
-                  </tr>
-                  <tr onclick="selectSmartDomain('logi')" class="hover:bg-indigo-50/70 cursor-pointer">
-                    <td class="py-2 px-3 font-extrabold text-purple-700 bg-purple-50/50">🚚 스마트 물류</td>
+                  <tr>
+                    <td class="py-2 px-3 font-extrabold bg-slate-50">🚗 교통 분야</td>
                     <td class="py-2 px-3">
-                      <span class="blank-slot" data-id="16" data-slide="3" data-ans="운송" data-alt="배송,배달,화물"></span> 차량의 위치를 실시간으로 추적하고 소비자의 주문 유형과
-                      <span class="blank-slot" data-id="17" data-slide="3" data-ans="재고" data-alt="상품재고,창고재고"></span> 물량 파악
+                      (드론 택시), (<span class="blank-slot" data-id="39" data-slide="5" data-ans="무인 자율주행 자동차" data-alt="무인자율주행자동차,자율주행자동차,자율주행차,무인자동차"></span>)
+                      <span class="font-black text-indigo-600 mx-1">←</span>
+                      (인공지능), (로봇 기술)
                     </td>
                   </tr>
-                  <tr onclick="selectSmartDomain('factory')" class="hover:bg-indigo-50/70 cursor-pointer">
-                    <td class="py-2 px-3 font-extrabold text-slate-800 bg-slate-100">🏭 스마트 공장</td>
-                    <td class="py-2 px-3">생산 기계를 실시간으로 관리하고 재고 물량을 바탕으로 제품을 생산하여 생산 과정 효율성 증대</td>
+                  <tr>
+                    <td class="py-2 px-3 font-extrabold bg-slate-50">🎓 교육 분야</td>
+                    <td class="py-2 px-3">
+                      (인공지능), (<span class="blank-slot" data-id="40" data-slide="5" data-ans="가상 현실 기술" data-alt="가상현실기술,가상현실,VR기술,VR"></span>)
+                      <span class="font-black text-indigo-600 mx-1">→</span>
+                      (<span class="blank-slot" data-id="41" data-slide="5" data-ans="수업 활동" data-alt="수업활동,수업,교육활동,학습활동"></span>) 혁신
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-extrabold bg-slate-50">🩺 의료 분야</td>
+                    <td class="py-2 px-3">
+                      질병을 (<span class="blank-slot" data-id="42" data-slide="5" data-group="med-care" data-ans="진단" data-alt="검사,판별"></span>)하고 (<span class="blank-slot" data-id="43" data-slide="5" data-group="med-care" data-ans="치료" data-alt="처방,치유"></span>)
+                      <span class="font-black text-indigo-600 mx-1">←</span>
+                      (사물 인터넷)과 (빅데이터 기술)로 의료 데이터를 분석
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-extrabold bg-slate-50">🌿 환경 분야</td>
+                    <td class="py-2 px-3">
+                      (<span class="blank-slot" data-id="44" data-slide="5" data-group="env-tech" data-ans="핵융합" data-alt="핵융합발전,핵융합기술"></span>), (<span class="blank-slot" data-id="45" data-slide="5" data-group="env-tech" data-ans="우주 태양광 발전" data-alt="우주태양광발전,우주태양광"></span>)
+                      <span class="font-black text-indigo-600 mx-1">→</span>
+                      (자연환경) 보존
+                    </td>
+                  </tr>
+                  <tr>
+                    <td class="py-2 px-3 font-extrabold bg-slate-50">🚀 우주 분야</td>
+                    <td class="py-2 px-3">
+                      달과 화성에서 (<span class="blank-slot" data-id="46" data-slide="5" data-ans="자원 개발" data-alt="자원개발,자원채취,자원탐사"></span>)
+                      <span class="font-black text-indigo-600 mx-1">←</span>
+                      (인공지능)과 (로봇 기술)을 활용한 우주 탐사
+                    </td>
                   </tr>
                 </tbody>
               </table>
             </div>
-
-            <div class="lg:col-span-4 bg-slate-900 text-white rounded-2xl p-5 flex flex-col justify-between">
-              <div>
-                <span class="text-[11px] font-extrabold text-amber-400 uppercase">IoT 실시간 흐름 분석</span>
-                <h3 id="smart-card-title" class="text-xl font-black mt-1 mb-4">🚚 스마트 물류</h3>
-                <div class="space-y-3 text-xs">
-                  <div class="p-3 rounded-xl bg-slate-800 border border-slate-700">
-                    <div class="text-indigo-300 font-bold mb-1">1. 센서 감지 데이터</div>
-                    <div id="smart-card-sensor" class="font-semibold text-slate-100">GPS 운송 차량 위치, 바코드/RFID 창고 재고 수량, 주문 데이터</div>
-                  </div>
-                  <div class="p-3 rounded-xl bg-slate-800 border border-slate-700">
-                    <div class="text-emerald-300 font-bold mb-1">2. 원격 상태 파악 및 제어</div>
-                    <div id="smart-card-control" class="font-semibold text-slate-100">실시간 배송 경로 최적화 및 부족한 재고 자동 발주</div>
-                  </div>
-                </div>
-              </div>
-              <p class="text-[11px] text-slate-400 mt-4">표의 각 행을 클릭하면 분야별 센서·제어 사례를 비교할 수 있습니다.</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex justify-between">
-          <span>💡 모든 스마트 분야의 공통 키워드: <strong>실시간 파악(추적) + 자동 관리 및 제어</strong></span>
-          <span class="font-bold">Slide 4 / 10</span>
-        </div>
-      </section>
-
-      <!-- SLIDE 5: ② 과학 기술의 발전과 인공지능 로봇 -->
-      <section class="slide-page" data-slide="4">
-        <div>
-          <div class="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h2 class="text-xl md:text-2xl font-black text-slate-900">② 과학 기술의 발전과 인공지능 로봇 — 1. 인공지능 로봇</h2>
-            <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full">AI & Robotics</span>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-            <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
-              <h3 class="text-lg font-black text-indigo-900">(1) 인공지능 기술</h3>
-              <p class="text-sm md:text-base font-semibold leading-relaxed">
-                ① <span class="blank-slot" data-id="18" data-slide="4" data-ans="빅데이터" data-alt="빅 데이터,방대한데이터,대용량데이터"></span>를 학습하고 분석하는 기술을 바탕으로 다양하게 활용
-              </p>
-              <div class="bg-white rounded-xl p-4 border border-slate-200 space-y-2.5 text-sm leading-relaxed">
-                <div class="text-xs font-extrabold text-indigo-600">대표 활용 사례 (ex)</div>
-                <p>• 사람의 말, 글, 그림 등을 입력하여 다양한 형식의
-                  <span class="blank-slot" data-id="19" data-slide="4" data-group="ai-gen" data-ans="문서" data-alt="글,텍스트"></span>,
-                  <span class="blank-slot" data-id="20" data-slide="4" data-group="ai-gen" data-ans="음악" data-alt="노래,오디오,소리"></span>,
-                  <span class="blank-slot" data-id="21" data-slide="4" data-group="ai-gen" data-ans="그림" data-alt="이미지,사진,영상"></span> 등을 제작
-                </p>
-                <p>• 기존 데이터의 추이를
-                  <span class="blank-slot" data-id="22" data-slide="4" data-ans="분석" data-alt="파악,학습"></span>하여 미래 변화
-                  <span class="blank-slot" data-id="23" data-slide="4" data-ans="예측" data-alt="예상,전망"></span>
-                </p>
-                <p>• 주변 상황을 인식하고 스스로 구동 장치를
-                  <span class="blank-slot" data-id="24" data-slide="4" data-ans="제어" data-alt="조작,조절"></span>하는
-                  <span class="blank-slot" data-id="25" data-slide="4" data-ans="자율주행" data-alt="자율 주행,무인자율주행"></span> 자동차 개발
-                </p>
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-700 flex justify-between">
+            <span>🔬 <strong>탐구 발문 [자료 분석]:</strong> 핵융합 발전과 우주 태양광 발전이 기존 화석 연료 발전과 비교해 자연환경 보존에 기여하는 과학적 원리는?</span>
+            <span class="font-bold">Slide 6 / 10</span>
+          </div>
+        </section>
+
+        <!-- SLIDE 7: ③ 과학 기술의 한계와 발전을 준비하는 자세 (47번 ~ 58번 빈칸) -->
+        <section class="slide-page" data-slide="6">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">③ 과학 기술의 유용성과 한계 — (2) 한계 & (3) 준비하는 자세</h2>
+              <div class="flex items-center gap-1.5">
+                <span class="px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-800 text-xs font-extrabold">블룸: 평가·성찰</span>
+                <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold">DOK 3 (비판적 사고·해결책)</span>
               </div>
             </div>
 
-            <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 space-y-3">
-              <h3 class="text-lg font-black text-emerald-900">(2) 인공지능 로봇</h3>
-              <p class="text-sm md:text-base font-semibold leading-relaxed">
-                ① <span class="blank-slot" data-id="26" data-slide="4" data-group="robot-core" data-ans="인공지능 기술" data-alt="인공지능기술,인공지능,AI기술,AI"></span>,
-                <span class="blank-slot" data-id="27" data-slide="4" data-group="robot-core" data-ans="반도체" data-alt="칩,인공지능반도체"></span>,
-                <span class="blank-slot" data-id="28" data-slide="4" data-group="robot-core" data-ans="센서" data-alt="감지기"></span> 등을 활용하여 자율적으로 행동하는 로봇
-              </p>
-              <div class="bg-white rounded-xl p-4 border border-slate-200 space-y-2.5 text-sm leading-relaxed">
-                <div class="text-xs font-extrabold text-emerald-700">특징 및 활용 분야 (ex)</div>
-                <p>• 주변 상황을 인식하여
-                  <span class="blank-slot" data-id="29" data-slide="4" data-ans="자율적" data-alt="스스로,자동"></span>으로 작업을 수행하는 로봇 : 인간과
-                  <span class="blank-slot" data-id="30" data-slide="4" data-ans="상호작용" data-alt="상호 작용,소통,협업,협력"></span>하여 작업 보조
-                </p>
-                <p>• 작업 환경과 목표에 따라
-                  <span class="blank-slot" data-id="31" data-slide="4" data-group="robot-form" data-ans="크기" data-alt="규모,사이즈"></span>,
-                  <span class="blank-slot" data-id="32" data-slide="4" data-group="robot-form" data-ans="형태" data-alt="모양,외형,모습"></span>,
-                  <span class="blank-slot" data-id="33" data-slide="4" data-group="robot-form" data-ans="작동 방식" data-alt="작동방식,구동방식,움직임"></span>을 달리하여 일상생활뿐만 아니라 문화·예술, 산업 현장, 우주 탐사 등 다양한 분야에서 활용
-                </p>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mt-3">
+              <div class="md:col-span-7 bg-rose-50/60 border-2 border-rose-200 rounded-2xl p-4 space-y-2">
+                <h3 class="text-base md:text-lg font-black text-rose-900 flex items-center gap-2">⚠️ (2) 과학 기술의 한계 (5가지 · 심화 빈칸)</h3>
+                <ul class="space-y-1.5 text-sm md:text-base font-medium text-slate-800">
+                  <li class="p-2 rounded-xl bg-white border border-rose-100 leading-relaxed">
+                    ① 예상하지 못한 <span class="blank-slot" data-id="47" data-slide="6" data-group="limit-waste" data-ans="오염" data-alt="환경오염,공해"></span>과
+                    <span class="blank-slot" data-id="48" data-slide="6" data-group="limit-waste" data-ans="폐기물" data-alt="쓰레기,폐기 물질"></span>
+                  </li>
+                  <li class="p-2 rounded-xl bg-white border border-rose-100 leading-relaxed">
+                    ② 취약 계층 등의 <span class="blank-slot" data-id="49" data-slide="6" data-ans="부적응성" data-alt="부적응,소외,적응어려움"></span>으로 인한
+                    <span class="blank-slot" data-id="50" data-slide="6" data-ans="사회적 불평등" data-alt="사회적불평등,불평등,정보격차,양극화"></span>
+                  </li>
+                  <li class="p-2 rounded-xl bg-white border border-rose-100 leading-relaxed">
+                    ③ 지속적 <span class="blank-slot" data-id="51" data-slide="6" data-ans="학습" data-alt="배움,교육,공부"></span>의 어려움
+                  </li>
+                  <li class="p-2 rounded-xl bg-white border border-rose-100 leading-relaxed">
+                    ④ 과학 기술 <span class="blank-slot" data-id="52" data-slide="6" data-ans="의존" data-alt="과몰입,맹신,의존성"></span>으로 인간의 삶에 필요한 필수 능력 약화
+                  </li>
+                  <li class="p-2 rounded-xl bg-white border border-rose-100 leading-relaxed">
+                    ⑤ 방대한 양의 개인 데이터 수집 및 사용으로 <span class="blank-slot" data-id="53" data-slide="6" data-group="limit-sec" data-ans="개인 정보 보호" data-alt="개인정보보호,개인정보,프라이버시,사생활보호"></span> 및
+                    <span class="blank-slot" data-id="54" data-slide="6" data-group="limit-sec" data-ans="보안" data-alt="정보보안,해킹,안전"></span>에 관한 문제 발생
+                  </li>
+                </ul>
               </div>
-            </div>
-          </div>
-        </div>
 
-        <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex justify-between">
-          <span>📌 같은 괄호 묶음(예: 문서·음악·그림 / 크기·형태·작동 방식)은 <strong>순서를 바꿔 입력해도 정답으로 인정</strong>됩니다.</span>
-          <span class="font-bold">Slide 5 / 10</span>
-        </div>
-      </section>
-
-      <!-- SLIDE 6: ③ 과학 기술의 유용성 -->
-      <section class="slide-page" data-slide="5">
-        <div>
-          <div class="flex items-center justify-between pb-2 border-b border-slate-200">
-            <h2 class="text-xl md:text-2xl font-black text-slate-900">③ 과학 기술의 유용성과 한계 — (1) 과학 기술의 유용성</h2>
-            <span class="text-xs font-bold text-indigo-600">교과서 핵심 5대 분야</span>
-          </div>
-
-          <div class="mt-2.5 p-3 rounded-xl bg-indigo-50 border border-indigo-200 text-xs md:text-sm font-semibold">
-            • 미래 사회의 다양한 분야에서 활용될 과학 기술(ex, 순서 무관):
-            <span class="blank-slot" data-id="34" data-slide="5" data-group="tech5" data-ans="사물 인터넷" data-alt="사물인터넷,IoT"></span>,
-            <span class="blank-slot" data-id="35" data-slide="5" data-group="tech5" data-ans="빅데이터" data-alt="빅 데이터"></span>,
-            <span class="blank-slot" data-id="36" data-slide="5" data-group="tech5" data-ans="인공지능" data-alt="인공 지능,AI"></span>,
-            <span class="blank-slot" data-id="37" data-slide="5" data-group="tech5" data-ans="로봇" data-alt="로봇기술,인공지능로봇"></span>,
-            <span class="blank-slot" data-id="38" data-slide="5" data-group="tech5" data-ans="가상 현실" data-alt="가상현실,VR"></span>
-          </div>
-
-          <div class="mt-3 overflow-hidden rounded-2xl border border-slate-200">
-            <table class="w-full text-left border-collapse text-xs md:text-sm">
-              <thead>
-                <tr class="bg-slate-800 text-white">
-                  <th class="py-2 px-3 w-24 font-extrabold">분야</th>
-                  <th class="py-2 px-3 font-extrabold">핵심 과학 기술 및 미래 사회 활용 모습</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-200 bg-white">
-                <tr>
-                  <td class="py-2 px-3 font-extrabold bg-slate-50">🚗 교통 분야</td>
-                  <td class="py-2 px-3">
-                    (드론 택시), (<span class="blank-slot" data-id="39" data-slide="5" data-ans="무인 자율주행 자동차" data-alt="무인자율주행자동차,자율주행자동차,자율주행차,무인자동차"></span>)
-                    <span class="font-black text-indigo-600 mx-1">←</span>
-                    (인공지능), (로봇 기술)
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 px-3 font-extrabold bg-slate-50">🎓 교육 분야</td>
-                  <td class="py-2 px-3">
-                    (인공지능), (<span class="blank-slot" data-id="40" data-slide="5" data-ans="가상 현실 기술" data-alt="가상현실기술,가상현실,VR기술,VR"></span>)
-                    <span class="font-black text-indigo-600 mx-1">→</span>
-                    (<span class="blank-slot" data-id="41" data-slide="5" data-ans="수업 활동" data-alt="수업활동,수업,교육활동,학습활동"></span>) 혁신
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 px-3 font-extrabold bg-slate-50">🩺 의료 분야</td>
-                  <td class="py-2 px-3">
-                    질병을 (<span class="blank-slot" data-id="42" data-slide="5" data-group="med-care" data-ans="진단" data-alt="검사,판별"></span>)하고 (<span class="blank-slot" data-id="43" data-slide="5" data-group="med-care" data-ans="치료" data-alt="처방,치유"></span>)
-                    <span class="font-black text-indigo-600 mx-1">←</span>
-                    (사물 인터넷)과 (빅데이터 기술)로 의료 데이터를 분석
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 px-3 font-extrabold bg-slate-50">🌿 환경 분야</td>
-                  <td class="py-2 px-3">
-                    (<span class="blank-slot" data-id="44" data-slide="5" data-group="env-tech" data-ans="핵융합" data-alt="핵융합발전,핵융합기술"></span>), (<span class="blank-slot" data-id="45" data-slide="5" data-group="env-tech" data-ans="우주 태양광 발전" data-alt="우주태양광발전,우주태양광"></span>)
-                    <span class="font-black text-indigo-600 mx-1">→</span>
-                    (자연환경) 보존
-                  </td>
-                </tr>
-                <tr>
-                  <td class="py-2 px-3 font-extrabold bg-slate-50">🚀 우주 분야</td>
-                  <td class="py-2 px-3">
-                    달과 화성에서 (<span class="blank-slot" data-id="46" data-slide="5" data-ans="자원 개발" data-alt="자원개발,자원채취,자원탐사"></span>)
-                    <span class="font-black text-indigo-600 mx-1">←</span>
-                    (인공지능)과 (로봇 기술)을 활용한 우주 탐사
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex justify-between">
-          <span>💡 교사가 빈칸 정답을 클릭해도 <strong>학생 화면에는 정답이 표시되지 않으며</strong> 학생이 직접 입력해야 합니다.</span>
-          <span class="font-bold">Slide 6 / 10</span>
-        </div>
-      </section>
-
-      <!-- SLIDE 7: ③ 과학 기술의 한계와 발전을 준비하는 자세 (47번 ~ 58번 빈칸) -->
-      <section class="slide-page" data-slide="6">
-        <div>
-          <div class="flex items-center justify-between pb-3 border-b border-slate-200">
-            <h2 class="text-xl md:text-2xl font-black text-slate-900">③ 과학 기술의 유용성과 한계 — (2) 한계 & (3) 준비하는 자세</h2>
-            <span class="text-xs font-bold text-rose-600 bg-rose-50 px-3 py-1 rounded-full">핵심 빈칸 (47) ~ (58)</span>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mt-4">
-            <div class="md:col-span-7 bg-rose-50/60 border-2 border-rose-200 rounded-2xl p-5 space-y-2.5">
-              <h3 class="text-lg font-black text-rose-900 flex items-center gap-2">⚠️ (2) 과학 기술의 한계 (5가지)</h3>
-              <ul class="space-y-2 text-sm md:text-base font-medium text-slate-800">
-                <li class="p-2.5 rounded-xl bg-white border border-rose-100 leading-relaxed">
-                  ① 예상하지 못한 <span class="blank-slot" data-id="47" data-slide="6" data-group="limit-waste" data-ans="오염" data-alt="환경오염,공해"></span>과
-                  <span class="blank-slot" data-id="48" data-slide="6" data-group="limit-waste" data-ans="폐기물" data-alt="쓰레기,폐기 물질"></span>
-                </li>
-                <li class="p-2.5 rounded-xl bg-white border border-rose-100 leading-relaxed">
-                  ② 취약 계층 등의 <span class="blank-slot" data-id="49" data-slide="6" data-ans="부적응성" data-alt="부적응,소외,적응어려움"></span>으로 인한
-                  <span class="blank-slot" data-id="50" data-slide="6" data-ans="사회적 불평등" data-alt="사회적불평등,불평등,정보격차,양극화"></span>
-                </li>
-                <li class="p-2.5 rounded-xl bg-white border border-rose-100 leading-relaxed">
-                  ③ 지속적 <span class="blank-slot" data-id="51" data-slide="6" data-ans="학습" data-alt="배움,교육,공부"></span>의 어려움
-                </li>
-                <li class="p-2.5 rounded-xl bg-white border border-rose-100 leading-relaxed">
-                  ④ 과학 기술 <span class="blank-slot" data-id="52" data-slide="6" data-ans="의존" data-alt="과몰입,맹신,의존성"></span>으로 인간의 삶에 필요한 필수 능력 약화
-                </li>
-                <li class="p-2.5 rounded-xl bg-white border border-rose-100 leading-relaxed">
-                  ⑤ 방대한 양의 개인 데이터 수집 및 사용으로 <span class="blank-slot" data-id="53" data-slide="6" data-group="limit-sec" data-ans="개인 정보 보호" data-alt="개인정보보호,개인정보,프라이버시,사생활보호"></span> 및
-                  <span class="blank-slot" data-id="54" data-slide="6" data-group="limit-sec" data-ans="보안" data-alt="정보보안,해킹,안전"></span>에 관한 문제 발생
-                </li>
-              </ul>
-            </div>
-
-            <div class="md:col-span-5 bg-emerald-50/70 border-2 border-emerald-200 rounded-2xl p-5 flex flex-col justify-between">
-              <div class="space-y-3">
-                <h3 class="text-lg font-black text-emerald-900 flex items-center gap-2">🧭 (3) 과학 기술의 발전을 준비하는 자세</h3>
-                <div class="space-y-2.5 text-sm md:text-base font-semibold text-slate-800">
-                  <div class="p-3 rounded-xl bg-white border border-emerald-200 leading-relaxed">
-                    <div class="text-xs font-extrabold text-emerald-700 mb-1">자세 ①</div>
-                    과학 기술의 한계 <span class="blank-slot" data-id="55" data-slide="6" data-ans="예측" data-alt="예상,파악,대비"></span>
-                  </div>
-                  <div class="p-3 rounded-xl bg-white border border-emerald-200 leading-relaxed">
-                    <div class="text-xs font-extrabold text-emerald-700 mb-1">자세 ②</div>
-                    과학 기술의 발전이 인간의 삶과 환경에 미치는 영향에 <span class="blank-slot" data-id="56" data-slide="6" data-ans="지속적인 관심" data-alt="지속적인관심,관심,꾸준한관심,지속적관심"></span>
-                  </div>
-                  <div class="p-3 rounded-xl bg-white border border-emerald-200 leading-relaxed">
-                    <div class="text-xs font-extrabold text-emerald-700 mb-1">자세 ③</div>
-                    가치 있는 해결책을 찾기 위해 <span class="blank-slot" data-id="57" data-slide="6" data-ans="협력" data-alt="협동,협업,연대"></span>하고 소통하는 <span class="blank-slot" data-id="58" data-slide="6" data-ans="태도" data-alt="자세,마음가짐"></span>
+              <div class="md:col-span-5 bg-emerald-50/70 border-2 border-emerald-200 rounded-2xl p-4 flex flex-col justify-between">
+                <div class="space-y-2.5">
+                  <h3 class="text-base md:text-lg font-black text-emerald-900 flex items-center gap-2">🧭 (3) 과학 기술의 발전을 준비하는 자세</h3>
+                  <div class="space-y-2 text-sm md:text-base font-semibold text-slate-800">
+                    <div class="p-2.5 rounded-xl bg-white border border-emerald-200 leading-relaxed">
+                      <div class="text-xs font-extrabold text-emerald-700 mb-0.5">자세 ①</div>
+                      과학 기술의 한계 <span class="blank-slot" data-id="55" data-slide="6" data-ans="예측" data-alt="예상,파악,대비"></span>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-white border border-emerald-200 leading-relaxed">
+                      <div class="text-xs font-extrabold text-emerald-700 mb-0.5">자세 ②</div>
+                      과학 기술의 발전이 인간의 삶과 환경에 미치는 영향에 <span class="blank-slot" data-id="56" data-slide="6" data-ans="지속적인 관심" data-alt="지속적인관심,관심,꾸준한관심,지속적관심"></span>
+                    </div>
+                    <div class="p-2.5 rounded-xl bg-white border border-emerald-200 leading-relaxed">
+                      <div class="text-xs font-extrabold text-emerald-700 mb-0.5">자세 ③</div>
+                      가치 있는 해결책을 찾기 위해 <span class="blank-slot" data-id="57" data-slide="6" data-ans="협력" data-alt="협동,협업,연대"></span>하고 소통하는 <span class="blank-slot" data-id="58" data-slide="6" data-ans="태도" data-alt="자세,마음가짐"></span>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="mt-3 p-3 rounded-xl bg-emerald-900 text-white text-xs">
-                다음 슬라이드부터 <strong>마무리 개념 확인 퀴즈(5문항)</strong>가 시작됩니다! 5문항을 모두 선택한 뒤 <strong>[퀴즈 채점하기]</strong>를 누르면 채점됩니다.
+                <div class="mt-2 p-2.5 rounded-xl bg-emerald-900 text-white text-xs">
+                  🔬 <strong>탐구 발문 [결론 도출]:</strong> 고령층 등 디지털 취약 계층의 부적응 문제를 해결하기 위해 우리 사회는 어떤 기술적·제도적 장치를 마련해야 할까?
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex justify-between">
-          <span>📌 학습지 빈칸 (1)~(58)을 모두 채운 뒤 다음 페이지의 마무리 퀴즈에 도전해 보세요!</span>
-          <span class="font-bold">Slide 7 / 10</span>
-        </div>
-      </section>
-
-      <!-- SLIDE 8: 마무리 개념 확인 퀴즈 (Q1 ~ Q2) -->
-      <section class="slide-page" data-slide="7">
-        <div>
-          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
-            <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (1/3) — 1번·2번 문항</h2>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
-                선택 현황: <strong class="quiz-selected-counter">0</strong> / 5문항 선택됨 (10페이지에서 일괄 채점)
-              </span>
-              <button type="button" onclick="openQuizStatsModal()" class="teacher-only-quiz-btn hidden px-3 py-1 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold shadow cursor-pointer">
-                🏆 문항별 정답자 수 & 최다 정답자 공개
-              </button>
-            </div>
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex justify-between">
+            <span>📌 학습지 빈칸 (1)~(58)을 모두 채운 뒤 다음 페이지의 마무리 퀴즈에 도전해 보세요!</span>
+            <span class="font-bold">Slide 7 / 10</span>
           </div>
+        </section>
 
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-0">
-              <div>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-extrabold text-indigo-600">QUESTION 01 · 시대별 과학 기술 발전</span>
-                  <span id="quiz-badge-0" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
-                </div>
-                <h3 class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">지능정보화 시대의 과학 기술 발전 방향에 대한 설명으로 가장 옳은 것은?</h3>
-                <div class="space-y-2" data-quiz="0">
-                  <button type="button" onclick="selectQuizOption(0, 0)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">① 지하자원이나 천연자원을 채취하여 물질을 추출하는 데만 집중한다.</button>
-                  <button type="button" onclick="selectQuizOption(0, 1)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">② 인간과 자연에 관한 데이터에서 정보를 추출하고 이를 활용하는 인공지능 기술로 발전한다.</button>
-                  <button type="button" onclick="selectQuizOption(0, 2)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">③ 인터넷 연결 없이 개별 기계가 독립적으로만 작동하는 제조 기술이다.</button>
-                  <button type="button" onclick="selectQuizOption(0, 3)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">④ 데이터의 축적보다 물리적 노동력의 투입량을 늘리는 방향으로 발전한다.</button>
-                </div>
-              </div>
-              <div id="quiz-fb-0" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-1">
-              <div>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-extrabold text-indigo-600">QUESTION 02 · 사물 인터넷(IoT) 구성과 활용</span>
-                  <span id="quiz-badge-1" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
-                </div>
-                <h3 class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">사물 인터넷(IoT) 기술에 대한 설명으로 옳지 <u>않은</u> 것은?</h3>
-                <div class="space-y-2" data-quiz="1">
-                  <button type="button" onclick="selectQuizOption(1, 0)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">① 사물에 센서, 통신 기능, 소프트웨어가 내장되어 있다.</button>
-                  <button type="button" onclick="selectQuizOption(1, 1)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">② 스마트팜에서는 온도·습도·토양 상태를 실시간 파악해 물과 영양분을 자동 공급한다.</button>
-                  <button type="button" onclick="selectQuizOption(1, 2)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">③ 스마트 물류에서는 운송 차량 위치를 실시간 추적하고 재고 물량을 파악한다.</button>
-                  <button type="button" onclick="selectQuizOption(1, 3)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">④ 사용자가 반드시 사물 옆에 직접 가서 수동으로만 상태를 확인하고 조작해야 한다.</button>
-                </div>
-              </div>
-              <div id="quiz-fb-1" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-          <span>💡 보기를 클릭해 답안을 선택한 뒤 <strong>다음 슬라이드(9~10페이지)</strong>로 이동해 5번까지 풀고 채점하세요.</span>
-          <button type="button" onclick="changeSlide(1)" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs cursor-pointer">3·4번 풀러 가기 ▶</button>
-        </div>
-      </section>
-
-      <!-- SLIDE 9: 마무리 개념 확인 퀴즈 (Q3 ~ Q4) -->
-      <section class="slide-page" data-slide="8">
-        <div>
-          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
-            <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (2/3) — 3번·4번 문항</h2>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
-                선택 현황: <strong class="quiz-selected-counter">0</strong> / 5문항 선택됨 (10페이지에서 일괄 채점)
-              </span>
-              <button type="button" onclick="openQuizStatsModal()" class="teacher-only-quiz-btn hidden px-3 py-1 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold shadow cursor-pointer">
-                🏆 문항별 정답자 수 & 최다 정답자 공개
-              </button>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-2">
-              <div>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-extrabold text-indigo-600">QUESTION 03 · 인공지능 로봇</span>
-                  <span id="quiz-badge-2" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
-                </div>
-                <h3 class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">인공지능과 인공지능 로봇에 대한 설명으로 옳은 것은?</h3>
-                <div class="space-y-2" data-quiz="2">
-                  <button type="button" onclick="selectQuizOption(2, 0)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">① 인공지능은 데이터 학습 없이 무작위로만 문서나 그림을 생성한다.</button>
-                  <button type="button" onclick="selectQuizOption(2, 1)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">② 인공지능 로봇은 모든 작업 환경에서 항상 동일한 크기와 형태로만 제작된다.</button>
-                  <button type="button" onclick="selectQuizOption(2, 2)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">③ 인공지능 기술, 반도체, 센서 등을 활용해 주변 상황을 인식하고 자율적으로 작업을 수행한다.</button>
-                  <button type="button" onclick="selectQuizOption(2, 3)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">④ 인공지능 로봇은 산업 현장에서만 쓰이며 문화·예술이나 우주 탐사에는 활용될 수 없다.</button>
-                </div>
-              </div>
-              <div id="quiz-fb-2" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-3">
-              <div>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-extrabold text-indigo-600">QUESTION 04 · 분야별 과학 기술의 유용성</span>
-                  <span id="quiz-badge-3" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
-                </div>
-                <h3 class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">미래 사회에서 과학 기술의 분야별 활용 연결이 <u>잘못된</u> 것은?</h3>
-                <div class="space-y-2" data-quiz="3">
-                  <button type="button" onclick="selectQuizOption(3, 0)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">① 교통 분야: 인공지능·로봇 기술 → 드론 택시, 무인 자율주행 자동차</button>
-                  <button type="button" onclick="selectQuizOption(3, 1)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">② 교육 분야: 인공지능·가상 현실 기술 → 수업 활동 혁신</button>
-                  <button type="button" onclick="selectQuizOption(3, 2)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">③ 환경 분야: 핵융합, 우주 태양광 발전 → 자연환경 보존</button>
-                  <button type="button" onclick="selectQuizOption(3, 3)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">④ 의료 분야: 사물 인터넷과 빅데이터 기술로 달과 화성에서 광물 자원만 채굴</button>
-                </div>
-              </div>
-              <div id="quiz-fb-3" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
-          <span>📌 다음 슬라이드(10페이지)에서 5번 문항까지 고른 뒤 <strong>[✅ 마무리 퀴즈 채점 및 제출하기]</strong>를 누르세요!</span>
-          <button type="button" onclick="changeSlide(1)" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs cursor-pointer">5번 풀고 채점하기 ▶</button>
-        </div>
-      </section>
-
-      <!-- SLIDE 10: 마무리 개념 확인 퀴즈 (Q5) & 채점 / 오답노트 / 제출 카드 -->
-      <section class="slide-page" data-slide="9">
-        <div>
-          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
-            <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (3/3) & 오답노트·제출</h2>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
-                선택 현황: <strong class="quiz-selected-counter">0</strong> / 5문항 선택됨
-              </span>
-              <button type="button" onclick="openQuizStatsModal()" class="teacher-only-quiz-btn hidden px-3.5 py-1.5 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold shadow animate-bounce cursor-pointer">
-                🏆 문항별 정답자 수 & 최다 정답 학생 공개하기
-              </button>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mt-4">
-            <div class="md:col-span-7 rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-4">
-              <div>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-extrabold text-indigo-600">QUESTION 05 · 과학 기술의 한계와 준비 자세</span>
-                  <span id="quiz-badge-4" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
-                </div>
-                <h3 class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">과학 기술의 한계와 이를 준비하는 바람직한 자세에 대한 설명으로 옳은 것은?</h3>
-                <div class="space-y-2" data-quiz="4">
-                  <button type="button" onclick="selectQuizOption(4, 0)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">① 방대한 개인 데이터 수집은 개인 정보 보호 및 보안 문제를 전혀 일으키지 않는다.</button>
-                  <button type="button" onclick="selectQuizOption(4, 1)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">② 과학 기술에 지나치게 의존하더라도 인간의 필수 능력은 약화되지 않는다.</button>
-                  <button type="button" onclick="selectQuizOption(4, 2)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">③ 과학 기술의 한계를 예측하고, 인간 삶과 환경에 미치는 영향에 지속적인 관심을 가지며 협력·소통한다.</button>
-                  <button type="button" onclick="selectQuizOption(4, 3)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">④ 취약 계층의 부적응성 문제는 과학 기술 발전과 무관하므로 무시해도 된다.</button>
-                </div>
-              </div>
-              <div id="quiz-fb-4" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
-            </div>
-
-            <!-- Final Grading, Wrong Note & Submission Card -->
-            <div class="md:col-span-5 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-5 flex flex-col justify-between">
-              <div>
-                <div class="flex items-center justify-between">
-                  <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-extrabold">퀴즈 채점 & 오답노트 리포트</span>
-                  <span id="quiz-Retry-status-pill" class="text-[11px] font-bold text-amber-300">채점 대기 중</span>
-                </div>
-
-                <div class="mt-3 p-3 rounded-xl bg-white/10 border border-white/10">
-                  <div class="text-[11px] text-slate-300 font-bold mb-2">문항별 상태 (클릭하면 해당 문제로 이동합니다)</div>
-                  <div class="grid grid-cols-5 gap-1.5 text-center text-xs font-extrabold">
-                    <button type="button" onclick="goToSlide(7, false)" id="mini-q-0" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">1번: -</button>
-                    <button type="button" onclick="goToSlide(7, false)" id="mini-q-1" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">2번: -</button>
-                    <button type="button" onclick="goToSlide(8, false)" id="mini-q-2" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">3번: -</button>
-                    <button type="button" onclick="goToSlide(8, false)" id="mini-q-3" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">4번: -</button>
-                    <button type="button" onclick="goToSlide(9, false)" id="mini-q-4" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">5번: -</button>
-                  </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3 my-3">
-                  <div class="p-3 rounded-xl bg-white/10 border border-white/10">
-                    <div class="text-xs text-slate-300">빈칸 완성도</div>
-                    <div class="text-xl font-black text-emerald-400 mt-0.5"><span id="final-blank-score">0</span> <span class="text-xs font-bold text-slate-300">/ 58</span></div>
-                  </div>
-                  <div class="p-3 rounded-xl bg-white/10 border border-white/10">
-                    <div class="text-xs text-slate-300">퀴즈 점수 (첫 채점)</div>
-                    <div class="text-xl font-black text-amber-400 mt-0.5"><span id="final-quiz-score">-</span> <span class="text-xs font-bold text-slate-300">/ 5</span></div>
-                  </div>
-                </div>
-
-                <label class="block text-xs font-bold text-slate-300 mb-1">오늘 수업 핵심 한 줄 성찰 (선택)</label>
-                <textarea id="student-reflection" rows="2" placeholder="미래 사회에서 과학 기술을 대하는 나의 다짐을 적어보세요." class="w-full p-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-emerald-400"></textarea>
-              </div>
-
-              <div class="space-y-2 mt-3">
-                <button id="grade-quiz-btn" type="button" onclick="gradeAndSubmitQuiz()" class="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-black text-xs shadow-lg transition cursor-pointer">
-                  ✅ 1단계: 마무리 퀴즈 채점 및 제출하기
+        <!-- SLIDE 8: 마무리 개념 확인 퀴즈 (Q1 ~ Q2) -->
+        <section class="slide-page" data-slide="7">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (1/3) — 1번·2번 문항</h2>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+                  선택 현황: <strong class="quiz-selected-counter">0</strong> / 5문항 선택됨 (마지막 페이지에서 일괄 채점)
+                </span>
+                <button type="button" onclick="openQuizStatsModal()" class="teacher-only-quiz-btn hidden px-3 py-1 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold shadow cursor-pointer">
+                  🏆 문항별 정답자 수 & 최다 정답자 공개
                 </button>
-                <button type="button" onclick="openStudentWrongNoteModal()" class="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-lg transition cursor-pointer">
-                  📓 2단계: 내 오답 다시 보기 & 오답노트 작성하기
-                </button>
-                <button id="student-final-submit-btn" type="button" onclick="submitStudentWork(true)" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg transition cursor-pointer">
-                  📤 3단계: 전체 작성 내용 선생님께 최종 전송하기
-                </button>
-                <button id="teacher-final-stat-btn" type="button" onclick="openQuizStatsModal()" class="hidden w-full py-3 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-black text-xs shadow-lg transition cursor-pointer">
-                  🏆 [교사용] 문항별 정답자 수 & 최다 정답 학생 공개
-                </button>
-                <p id="submit-confirm-msg" class="text-[11px] text-center text-emerald-300 hidden">✅ 선생님 화면으로 채점 결과가 전송되었습니다!</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-0">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-indigo-600">QUESTION 01 · 기본 (DOK 1)</span>
+                    <span id="quiz-badge-0" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
+                  </div>
+                  <h3 id="quiz-qtext-0" class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">지능정보화 시대의 과학 기술 발전 방향에 대한 설명으로 가장 옳은 것은?</h3>
+                  <div class="space-y-2" data-quiz="0" id="quiz-opts-0">
+                    <button type="button" onclick="selectQuizOption(0, 0)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">① 지하자원이나 천연자원을 채취하여 물질을 추출하는 데만 집중한다.</button>
+                    <button type="button" onclick="selectQuizOption(0, 1)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">② 인간과 자연에 관한 데이터에서 정보를 추출하고 이를 활용하는 인공지능 기술로 발전한다.</button>
+                    <button type="button" onclick="selectQuizOption(0, 2)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">③ 인터넷 연결 없이 개별 기계가 독립적으로만 작동하는 제조 기술이다.</button>
+                    <button type="button" onclick="selectQuizOption(0, 3)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">④ 데이터의 축적보다 물리적 노동력의 투입량을 늘리는 방향으로 발전한다.</button>
+                  </div>
+                </div>
+                <div id="quiz-fb-0" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-1">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-indigo-600">QUESTION 02 · 기본 (DOK 2)</span>
+                    <span id="quiz-badge-1" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
+                  </div>
+                  <h3 id="quiz-qtext-1" class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">사물 인터넷(IoT) 기술에 대한 설명으로 옳지 않은 것은?</h3>
+                  <div class="space-y-2" data-quiz="1" id="quiz-opts-1">
+                    <button type="button" onclick="selectQuizOption(1, 0)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">① 사물에 센서, 통신 기능, 소프트웨어가 내장되어 있다.</button>
+                    <button type="button" onclick="selectQuizOption(1, 1)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">② 스마트팜에서는 온도·습도·토양 상태를 실시간 파악해 물과 영양분을 자동 공급한다.</button>
+                    <button type="button" onclick="selectQuizOption(1, 2)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">③ 스마트 물류에서는 운송 차량 위치를 실시간 추적하고 재고 물량을 파악한다.</button>
+                    <button type="button" onclick="selectQuizOption(1, 3)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">④ 사용자가 반드시 사물 옆에 직접 가서 수동으로만 상태를 확인하고 조작해야 한다.</button>
+                  </div>
+                </div>
+                <div id="quiz-fb-1" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
               </div>
             </div>
           </div>
+
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+            <span>💡 보기를 클릭해 답안을 선택한 뒤 <strong>다음 슬라이드</strong>로 이동해 5번까지 풀고 일괄 채점하세요.</span>
+            <button type="button" onclick="changeSlide(1)" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs cursor-pointer">3·4번 풀러 가기 ▶</button>
+          </div>
+        </section>
+
+        <!-- SLIDE 9: 마무리 개념 확인 퀴즈 (Q3 ~ Q4) -->
+        <section class="slide-page" data-slide="8">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (2/3) — 3번·4번 문항</h2>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+                  선택 현황: <strong class="quiz-selected-counter">0</strong> / 5문항 선택됨 (마지막 페이지에서 일괄 채점)
+                </span>
+                <button type="button" onclick="openQuizStatsModal()" class="teacher-only-quiz-btn hidden px-3 py-1 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold shadow cursor-pointer">
+                  🏆 문항별 정답자 수 & 최다 정답자 공개
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-2">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-indigo-600">QUESTION 03 · 적용 (DOK 2)</span>
+                    <span id="quiz-badge-2" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
+                  </div>
+                  <h3 id="quiz-qtext-2" class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">인공지능과 인공지능 로봇에 대한 설명으로 옳은 것은?</h3>
+                  <div class="space-y-2" data-quiz="2" id="quiz-opts-2">
+                    <button type="button" onclick="selectQuizOption(2, 0)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">① 인공지능은 데이터 학습 없이 무작위로만 문서나 그림을 생성한다.</button>
+                    <button type="button" onclick="selectQuizOption(2, 1)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">② 인공지능 로봇은 모든 작업 환경에서 항상 동일한 크기와 형태로만 제작된다.</button>
+                    <button type="button" onclick="selectQuizOption(2, 2)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">③ 인공지능 기술, 반도체, 센서 등을 활용해 주변 상황을 인식하고 자율적으로 작업을 수행한다.</button>
+                    <button type="button" onclick="selectQuizOption(2, 3)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">④ 인공지능 로봇은 산업 현장에서만 쓰이며 문화·예술이나 우주 탐사에는 활용될 수 없다.</button>
+                  </div>
+                </div>
+                <div id="quiz-fb-2" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
+              </div>
+
+              <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-3">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-rose-600">QUESTION 04 · 심화 분석 (DOK 2)</span>
+                    <span id="quiz-badge-3" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
+                  </div>
+                  <h3 id="quiz-qtext-3" class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">미래 사회에서 과학 기술의 분야별 활용 연결이 잘못된 것은?</h3>
+                  <div class="space-y-2" data-quiz="3" id="quiz-opts-3">
+                    <button type="button" onclick="selectQuizOption(3, 0)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">① 교통 분야: 인공지능·로봇 기술 → 드론 택시, 무인 자율주행 자동차</button>
+                    <button type="button" onclick="selectQuizOption(3, 1)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">② 교육 분야: 인공지능·가상 현실 기술 → 수업 활동 혁신</button>
+                    <button type="button" onclick="selectQuizOption(3, 2)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">③ 환경 분야: 핵융합, 우주 태양광 발전 → 자연환경 보존</button>
+                    <button type="button" onclick="selectQuizOption(3, 3)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">④ 의료 분야: 사물 인터넷과 빅데이터 기술로 달과 화성에서 광물 자원만 채굴</button>
+                  </div>
+                </div>
+                <div id="quiz-fb-3" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+            <span>📌 다음 슬라이드에서 5번 문항까지 고른 뒤 <strong>[✅ 1단계: 마무리 퀴즈 채점 및 제출하기]</strong>를 누르세요!</span>
+            <button type="button" onclick="changeSlide(1)" class="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs cursor-pointer">5번 풀고 채점하기 ▶</button>
+          </div>
+        </section>
+
+        <!-- SLIDE 10: 마무리 개념 확인 퀴즈 (Q5) & 채점 / 오답노트 / 제출 카드 -->
+        <section class="slide-page" data-slide="9">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (3/3) & 오답노트·제출</h2>
+              <div class="flex items-center gap-2">
+                <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+                  선택 현황: <strong class="quiz-selected-counter">0</strong> / 5문항 선택됨
+                </span>
+                <button type="button" onclick="openQuizStatsModal()" class="teacher-only-quiz-btn hidden px-3.5 py-1.5 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold shadow animate-bounce cursor-pointer">
+                  🏆 문항별 정답자 수 & 최다 정답 학생 공개하기
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mt-4">
+              <div class="md:col-span-7 rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-4">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-rose-600">QUESTION 05 · 심화 평가 (DOK 3)</span>
+                    <span id="quiz-badge-4" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
+                  </div>
+                  <h3 id="quiz-qtext-4" class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">과학 기술의 한계와 이를 준비하는 바람직한 자세에 대한 설명으로 옳은 것은?</h3>
+                  <div class="space-y-2" data-quiz="4" id="quiz-opts-4">
+                    <button type="button" onclick="selectQuizOption(4, 0)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">① 방대한 개인 데이터 수집은 개인 정보 보호 및 보안 문제를 전혀 일으키지 않는다.</button>
+                    <button type="button" onclick="selectQuizOption(4, 1)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">② 과학 기술에 지나치게 의존하더라도 인간의 필수 능력은 약화되지 않는다.</button>
+                    <button type="button" onclick="selectQuizOption(4, 2)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">③ 과학 기술의 한계를 예측하고, 인간 삶과 환경에 미치는 영향에 지속적인 관심을 가지며 협력·소통한다.</button>
+                    <button type="button" onclick="selectQuizOption(4, 3)" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">④ 취약 계층의 부적응성 문제는 과학 기술 발전과 무관하므로 무시해도 된다.</button>
+                  </div>
+                </div>
+                <div id="quiz-fb-4" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
+              </div>
+
+              <!-- Final Grading, Wrong Note & Submission Card -->
+              <div class="md:col-span-5 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-5 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-extrabold">퀴즈 채점 & 오답노트 리포트</span>
+                    <span id="quiz-Retry-status-pill" class="text-[11px] font-bold text-amber-300">채점 대기 중</span>
+                  </div>
+
+                  <div class="mt-3 p-3 rounded-xl bg-white/10 border border-white/10">
+                    <div class="text-[11px] text-slate-300 font-bold mb-2">문항별 상태 (클릭하면 해당 문제로 이동합니다)</div>
+                    <div class="grid grid-cols-5 gap-1.5 text-center text-xs font-extrabold">
+                      <button type="button" onclick="jumpToQuizSlide(0)" id="mini-q-0" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">1번: -</button>
+                      <button type="button" onclick="jumpToQuizSlide(1)" id="mini-q-1" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">2번: -</button>
+                      <button type="button" onclick="jumpToQuizSlide(2)" id="mini-q-2" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">3번: -</button>
+                      <button type="button" onclick="jumpToQuizSlide(3)" id="mini-q-3" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">4번: -</button>
+                      <button type="button" onclick="jumpToQuizSlide(4)" id="mini-q-4" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">5번: -</button>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3 my-3">
+                    <div class="p-3 rounded-xl bg-white/10 border border-white/10">
+                      <div class="text-xs text-slate-300">빈칸 완성도</div>
+                      <div class="text-xl font-black text-emerald-400 mt-0.5"><span id="final-blank-score">0</span> <span class="text-xs font-bold text-slate-300">/ <span class="inline-total-blanks">58</span></span></div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-white/10 border border-white/10">
+                      <div class="text-xs text-slate-300">퀴즈 점수 (첫 채점)</div>
+                      <div class="text-xl font-black text-amber-400 mt-0.5"><span id="final-quiz-score">-</span> <span class="text-xs font-bold text-slate-300">/ 5</span></div>
+                    </div>
+                  </div>
+
+                  <label class="block text-xs font-bold text-slate-300 mb-1">오늘 수업 핵심 한 줄 성찰 (선택)</label>
+                  <textarea id="student-reflection" rows="2" placeholder="오늘 배운 과학 기술 개념과 나의 다짐을 적어보세요." class="w-full p-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs placeholder:text-slate-400 focus:outline-none focus:border-emerald-400"></textarea>
+                </div>
+
+                <div class="space-y-2 mt-3">
+                  <button id="grade-quiz-btn" type="button" onclick="gradeAndSubmitQuiz()" class="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-black text-xs shadow-lg transition cursor-pointer">
+                    ✅ 1단계: 마무리 퀴즈 채점 및 제출하기
+                  </button>
+                  <button type="button" onclick="openStudentWrongNoteModal()" class="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-lg transition cursor-pointer">
+                    📓 2단계: 내 오답 다시 보기 & 오답노트 작성하기
+                  </button>
+                  <button id="student-final-submit-btn" type="button" onclick="submitStudentWork(true)" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg transition cursor-pointer">
+                    📤 3단계: 전체 작성 내용 선생님께 최종 전송하기
+                  </button>
+                  <button id="teacher-final-stat-btn" type="button" onclick="openQuizStatsModal()" class="hidden w-full py-3 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-black text-xs shadow-lg transition cursor-pointer">
+                    🏆 [교사용] 문항별 정답자 수 & 최다 정답 학생 공개
+                  </button>
+                  <p id="submit-confirm-msg" class="text-[11px] text-center text-emerald-300 hidden">✅ 선생님 화면으로 채점 결과가 전송되었습니다!</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex justify-between">
+            <span>👏 <strong>[📓 내 오답 다시 보기 & 오답노트 작성하기]</strong>를 누르면 틀린 문제 페이지로 바로 이동해 복습하고 선생님 피드백도 받을 수 있습니다!</span>
+            <span class="font-bold">Final Slide</span>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       NEW: AI PDF TO INTERACTIVE SLIDES GENERATOR MODAL (Teacher Only)
+       ========================================== -->
+  <div id="pdf-generator-modal" class="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md hidden items-center justify-center p-4 selectable-text">
+    <div class="bg-white text-slate-900 rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
+      <div class="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
+        <div>
+          <span class="px-2.5 py-0.5 rounded-full bg-rose-500/30 text-rose-300 font-extrabold text-xs">Gemini 2.5 Flash 멀티모달 엔진</span>
+          <h2 class="text-xl font-black mt-1">📄 학습지 PDF 첨부 → 양방향 수업 슬라이드 자동 생성</h2>
+        </div>
+        <button type="button" onclick="closePdfGeneratorModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs cursor-pointer">닫기 ✕</button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5 flex-1 text-xs md:text-sm">
+        <div class="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-950 space-y-1.5">
+          <div class="font-black text-sm">✨ 어떤 학습지 PDF든 올리면 아래 요소가 모두 포함된 슬라이드로 즉시 변환됩니다:</div>
+          <ul class="list-disc list-inside text-xs space-y-1 text-indigo-900">
+            <li>PDF의 모든 문항·표·시각 자료(그림/그래프 이미지 스캔) 추출 및 슬라이드 분할</li>
+            <li>슬라이드별 <strong>블룸의 교육목표 분류(이해/적용/분석/평가)</strong> 및 <strong>DOK 수준(1~3)</strong> 배지 자동 표시</li>
+            <li><strong>과학 탐구 흐름(관찰→가설→실험→자료 분석→결론)</strong> 맞춤 발문 및 어려운 용어 <strong>자동 주석(툴팁)</strong></li>
+            <li><strong>기본 문항 / 심화 문항</strong> 차별화 과제, <strong>유연한 빈칸 채점</strong>, <strong>5문항 일괄 채점 퀴즈 + 오답노트</strong> 자동 연결</li>
+          </ul>
         </div>
 
-        <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex justify-between">
-          <span>👏 <strong>[📓 내 오답 다시 보기 & 오답노트 작성하기]</strong>를 누르면 틀린 문제 페이지로 바로 이동해 복습하고 선생님 피드백도 받을 수 있습니다!</span>
-          <span class="font-bold">Slide 10 / 10</span>
+        <!-- Step 1: Gemini API Key -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="font-extrabold text-slate-800">1️⃣ Google Gemini API 키 입력 (교사 브라우저에만 안전하게 저장됩니다)</label>
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs font-extrabold text-indigo-600 underline">🔑 무료 API 키 발급받기 ↗</a>
+          </div>
+          <input id="gemini-api-key-input" type="password" placeholder="AIzaSy... 로 시작하는 Gemini API 키를 붙여넣으세요" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-xs focus:outline-none focus:border-indigo-600">
         </div>
-      </section>
+
+        <!-- Step 2: Lesson ID & PDF File Upload -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block font-extrabold text-slate-800 mb-1">2️⃣ 새 수업 차시 고유 이름 (스프레드시트 구분용)</label>
+            <input id="new-lesson-id-input" type="text" placeholder="예: 3-2-2 과학 기술과 윤리" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-xs focus:outline-none focus:border-indigo-600">
+          </div>
+          <div>
+            <label class="block font-extrabold text-slate-800 mb-1">3️⃣ 고등학교 과학 학습지 PDF 파일 선택</label>
+            <input id="pdf-file-input" type="file" accept="application/pdf" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-xs font-bold cursor-pointer">
+          </div>
+        </div>
+
+        <!-- Progress Status Box -->
+        <div id="pdf-gen-progress-box" class="hidden p-4 rounded-2xl bg-slate-900 text-white space-y-2">
+          <div class="flex items-center justify-between">
+            <span id="pdf-gen-status-title" class="font-extrabold text-amber-400 text-xs">⏳ PDF 페이지 텍스트 및 시각 자료 스캔 중...</span>
+            <span id="pdf-gen-step-badge" class="text-[11px] font-mono text-slate-300">1 / 3 단계</span>
+          </div>
+          <div class="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden">
+            <div id="pdf-gen-progress-bar" class="h-full bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-400 transition-all duration-300" style="width: 20%"></div>
+          </div>
+          <p id="pdf-gen-status-detail" class="text-[11px] text-slate-300">학습지의 그림, 표, 빈칸, 탐구 발문을 분석하고 있습니다. 약 15~25초 소요됩니다.</p>
+        </div>
+      </div>
+
+      <div class="p-4 bg-slate-100 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
+        <button type="button" onclick="resetToDefaultLesson()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold text-xs cursor-pointer">
+          ↩ 기본 수업(3-2-1 과학 기술과 미래 사회)으로 복원
+        </button>
+        <button id="start-pdf-gen-btn" type="button" onclick="handlePdfSlideGeneration()" class="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-lg transition cursor-pointer">
+          🚀 PDF 분석하여 수업 슬라이드 자동 생성하기
+        </button>
+      </div>
     </div>
   </div>
 
@@ -982,43 +1117,35 @@
       </div>
 
       <div class="p-6 overflow-y-auto space-y-6 flex-1">
-        <!-- Teacher Feedback Arrival Box -->
         <div id="student-feedback-view-box" class="p-4 rounded-2xl bg-indigo-50 border-2 border-indigo-200">
           <div class="flex items-center justify-between mb-1">
             <span class="text-xs font-extrabold text-indigo-700">💬 선생님께서 보내주신 피드백</span>
-            <span id="student-feedback-time" class="text-[11px] text-indigo-400 font-semibold">실시간 연동</span>
+            <span class="text-[11px] text-indigo-400 font-semibold">실시간 연동</span>
           </div>
           <p id="student-feedback-content" class="text-sm font-bold text-slate-800">
             아직 도착한 피드백이 없습니다. 오답노트를 작성해 제출하면 선생님께서 확인 후 피드백을 보내주십니다!
           </p>
         </div>
 
-        <!-- Section 1: Wrong / Unfilled Blanks List with Jump-to-Slide Buttons -->
         <div>
           <div class="flex items-center justify-between mb-2">
             <h3 class="text-base font-black text-slate-900">1️⃣ 내가 아직 못 채웠거나 틀린 빈칸 목록</h3>
             <span class="text-xs text-slate-500">버튼을 누르면 해당 슬라이드 페이지로 바로 이동해 다시 공부할 수 있습니다</span>
           </div>
-          <div id="student-wrong-blanks-list" class="flex flex-wrap gap-2 p-4 rounded-2xl bg-slate-50 border border-slate-200">
-            <!-- Populated dynamically -->
-          </div>
+          <div id="student-wrong-blanks-list" class="flex flex-wrap gap-2 p-4 rounded-2xl bg-slate-50 border border-slate-200"></div>
         </div>
 
-        <!-- Section 2: Wrong Quiz Items & Wrong-Note Writing -->
         <div>
           <div class="flex items-center justify-between mb-2">
             <h3 class="text-base font-black text-slate-900">2️⃣ 마무리 확인 퀴즈 오답 복습 및 오답노트 작성</h3>
             <span class="text-xs font-bold text-rose-600">틀린 이유나 핵심 개념을 한 줄로 정리해 보세요</span>
           </div>
-          <div id="student-wrong-quiz-list" class="space-y-3">
-            <!-- Populated dynamically -->
-          </div>
+          <div id="student-wrong-quiz-list" class="space-y-3"></div>
         </div>
 
-        <!-- General Wrong-Note Summary Textarea -->
         <div class="p-4 rounded-2xl bg-amber-50/70 border border-amber-200">
           <label class="block text-xs font-extrabold text-amber-900 mb-1.5">📝 오늘 틀렸던 개념 핵심 요약 노트 (선생님께 전송됩니다)</label>
-          <textarea id="student-general-wrong-note" rows="3" placeholder="예: 산업 시대는 물질 추출·물품 제조이고, 지능정보화 시대는 데이터에서 정보를 추출해 인공지능 기술로 발전한다는 점을 헷갈렸다. 사물 인터넷은 원격 제어가 핵심이다!" class="w-full p-3 rounded-xl bg-white border border-amber-300 text-xs md:text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-600"></textarea>
+          <textarea id="student-general-wrong-note" rows="3" placeholder="오늘 헷갈렸던 개념이나 새롭게 알게 된 과학적 원리를 나만의 언어로 정리해 보세요." class="w-full p-3 rounded-xl bg-white border border-amber-300 text-xs md:text-sm font-medium text-slate-800 focus:outline-none focus:border-indigo-600"></textarea>
         </div>
       </div>
 
@@ -1056,7 +1183,7 @@
         <div class="md:col-span-5 bg-gradient-to-br from-indigo-950 via-purple-950 to-slate-900 text-white rounded-2xl p-6 flex flex-col justify-between shadow-xl">
           <div>
             <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 text-amber-300 text-xs font-extrabold">
-              👑 오늘의 과학 기술 마스터
+              👑 오늘의 과학 마스터
             </div>
             <h3 class="text-xl font-black mt-2 mb-4">가장 문제를 많이 맞힌 학생</h3>
             <div id="top-scorer-container" class="space-y-3">
@@ -1067,7 +1194,7 @@
           </div>
 
           <div class="mt-5 pt-4 border-t border-white/15 text-[11px] text-slate-300 flex items-center justify-between">
-            <span>※ 확인 퀴즈(첫 채점 5문항) + 빈칸(58문항) 합산</span>
+            <span>※ 확인 퀴즈(첫 채점) + 빈칸 점수 합산</span>
             <button type="button" onclick="broadcastQuizStatsToStudents()" class="px-3 py-1.5 rounded-lg bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs transition cursor-pointer">
               학생 화면에도 함께 띄우기
             </button>
@@ -1138,7 +1265,6 @@
        ========================================== -->
   <div id="teacher-dashboard-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm hidden items-center justify-center p-3 md:p-5 selectable-text">
     <div class="bg-white text-slate-900 rounded-3xl max-w-6xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden">
-      <!-- Top Header -->
       <div class="p-4 md:p-5 bg-slate-900 text-white flex flex-wrap items-center justify-between gap-3">
         <div>
           <div class="flex items-center gap-2">
@@ -1148,7 +1274,7 @@
           <h3 class="text-lg md:text-xl font-black mt-0.5">실시간 학생 답안 수합 · 오답노트 피드백 · 반별/문항별 대시보드</h3>
         </div>
         <div class="flex flex-wrap items-center gap-1.5">
-          <button type="button" onclick="fetchAllRecordsFromGoogleSheet()" class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition cursor-pointer" title="구글 시트에 저장된 이전 차시/반 데이터를 모두 불러와 분석합니다">
+          <button type="button" onclick="fetchAllRecordsFromGoogleSheet()" class="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black transition cursor-pointer">
             ☁️ 구글 시트 전체 차시 불러오기
           </button>
           <button type="button" onclick="exportSubmissionsCSV()" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold transition cursor-pointer">
@@ -1186,24 +1312,31 @@
         </div>
       </div>
 
-      <!-- Optional Google Apps Script Setup Guide -->
+      <!-- Google Apps Script Setup Guide (Includes Safe doGet & Slides_DB storage) -->
       <div id="teacher-setup-guide" class="hidden bg-indigo-50 border-b border-indigo-200 p-5 text-xs space-y-3 overflow-y-auto max-h-96 selectable-text">
-        <div class="font-black text-sm text-indigo-950">📌 구글 스프레드시트 연동 & 여러 차시 통합 관리 설정법</div>
+        <div class="font-black text-sm text-indigo-950">📌 구글 스프레드시트 연동 & 여러 차시·PDF 슬라이드 통합 관리 설정법</div>
         <div class="p-4 rounded-xl bg-white border border-indigo-200 space-y-3">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <span class="font-extrabold text-indigo-900">1단계: 아래 초록색 [📋 새 Apps Script 코드 복사하기] 버튼을 클릭하세요. (초시 정오·정복현황·오답노트·피드백·차시 통합 지원)</span>
+            <span class="font-extrabold text-indigo-900">1단계: 아래 초록색 [📋 통합 Apps Script 코드 복사하기] 버튼을 클릭하세요. (오류 방지 안전장치 포함)</span>
             <button type="button" onclick="copyAppsScriptCode()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition cursor-pointer">
-              📋 새 Apps Script 코드 복사하기
+              📋 통합 Apps Script 코드 복사하기
             </button>
           </div>
           <p id="gas-copy-feedback" class="text-emerald-700 bg-emerald-50 border border-emerald-200 p-2 rounded-lg font-extrabold hidden">
-            ✅ 코드가 복사되었습니다! 구글 시트 [확장 프로그램] → [Apps Script]에 붙여넣고 [새 배포] 해주세요.
+            ✅ 코드가 복사되었습니다! 구글 시트 [확장 프로그램] → [Apps Script]에 붙여넣고 반드시 [배포] → [새 배포] 후 새 URL을 아래에 저장하세요!
           </p>
           <textarea id="gas-script-textarea" readonly rows="6" onclick="this.focus();this.select();" class="w-full p-3 bg-slate-900 text-emerald-300 font-mono rounded-xl text-[11px] leading-relaxed focus:outline-none border-2 border-slate-700 cursor-text">function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
   var data = JSON.parse(e.postData.contents);
+  if (data.action === "SAVE_GENERATED_SLIDES") {
+    var slideSheet = ss.getSheetByName("Slides_DB") || ss.insertSheet("Slides_DB");
+    if (slideSheet.getLastRow() === 0) slideSheet.appendRow(["생성일시", "lessonId", "roomCode", "단원명", "슬라이드JSON"]);
+    slideSheet.appendRow([new Date().toLocaleString("ko-KR"), data.lessonId, data.roomCode, data.title, JSON.stringify(data.slideDeck)]);
+    return ContentService.createTextOutput("SLIDE_SAVED");
+  }
+  var sheet = ss.getSheets()[0];
   if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["최근전송시각", "수업차시", "반", "학번", "이름", "빈칸점수(58)", "퀴즈초시점수(5)", "문항별초시정오(1~5번)", "오답정복현황", "틀린빈칸번호", "오답노트작성여부", "학생오답노트내용", "한줄성찰", "교사피드백", "원본JSON"]);
+    sheet.appendRow(["최근전송시각", "수업차시", "반", "학번", "이름", "빈칸점수", "퀴즈초시점수(5)", "문항별초시정오(1~5번)", "오답정복현황", "틀린빈칸번호", "오답노트작성여부", "학생오답노트내용", "한줄성찰", "교사피드백", "원본JSON"]);
   }
   var values = sheet.getDataRange().getValues();
   if (data.action === "TEACHER_FEEDBACK") {
@@ -1229,11 +1362,24 @@
   return ContentService.createTextOutput("OK");
 }
 function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (e && e.parameter && e.parameter.mode === "GET_SLIDE") {
+    var slideSheet = ss.getSheetByName("Slides_DB");
+    if (!slideSheet || slideSheet.getLastRow() <= 1) return ContentService.createTextOutput(JSON.stringify({ error: "NO_SLIDE" })).setMimeType(ContentService.MimeType.JSON);
+    var rows = slideSheet.getDataRange().getValues();
+    var targetLesson = e.parameter.lessonId;
+    for (var s = rows.length - 1; s >= 1; s--) {
+      if (!targetLesson || String(rows[s][1]) === String(targetLesson)) return ContentService.createTextOutput(rows[s][4]).setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+  var sheet = ss.getSheets()[0];
+  if (sheet.getLastRow() <= 1 || sheet.getLastColumn() < 14) {
+    return ContentService.createTextOutput(JSON.stringify([])).setMimeType(ContentService.MimeType.JSON);
+  }
   var values = sheet.getDataRange().getValues();
   var records = [];
   for (var i = 1; i < values.length; i++) {
-    var rawJson = values[i][14];
+    var rawJson = values[i].length >= 15 ? values[i][14] : "";
     if (rawJson) { try { var parsed = JSON.parse(rawJson); if (values[i][13] && values[i][13] !== "-") parsed.teacherFeedback = values[i][13]; records.push(parsed); } catch (err) {} }
   }
   return ContentService.createTextOutput(JSON.stringify(records)).setMimeType(ContentService.MimeType.JSON);
@@ -1247,7 +1393,7 @@ function doGet(e) {
         </div>
       </div>
 
-      <!-- TAB 1: Real-time Student Table (Matches user's screenshot + Wrong Note + Feedback) -->
+      <!-- TAB 1: Real-time Student Table -->
       <div id="dash-view-table" class="p-5 overflow-y-auto flex-1">
         <table class="w-full text-left border-collapse text-xs">
           <thead>
@@ -1255,7 +1401,7 @@ function doGet(e) {
               <th class="py-2.5 px-2.5 font-extrabold">차시 / 반</th>
               <th class="py-2.5 px-2.5 font-extrabold">학번</th>
               <th class="py-2.5 px-2.5 font-extrabold">이름</th>
-              <th class="py-2.5 px-2.5 font-extrabold">빈칸 점수 (58)</th>
+              <th class="py-2.5 px-2.5 font-extrabold">빈칸 점수</th>
               <th class="py-2.5 px-2.5 font-extrabold">퀴즈 초시 점수 (5)</th>
               <th class="py-2.5 px-2.5 font-extrabold">문항별 초시 정오(1~5번)</th>
               <th class="py-2.5 px-2.5 font-extrabold">오답 정복 현황</th>
@@ -1267,23 +1413,22 @@ function doGet(e) {
           <tbody id="submissions-tbody" class="divide-y divide-slate-200">
             <tr>
               <td colspan="10" class="py-10 text-center text-slate-400 font-semibold">
-                아직 연결되거나 제출한 학생이 없습니다. 상단 [학생 초대 QR] 버튼을 눌러 학생들을 초대해 보세요.
+                아직 연결되거나 제출한 학생이 없습니다. 상단 [초대 QR] 버튼을 눌러 학생들을 초대해 보세요.
               </td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- TAB 2: Multi-Dimensional Analytics Dashboard (By Class, Lesson, Question Best/Worst, Student) -->
+      <!-- TAB 2: Multi-Dimensional Analytics Dashboard -->
       <div id="dash-view-analytics" class="hidden p-5 overflow-y-auto flex-1 space-y-6 bg-slate-50">
-        <!-- Top KPI Cards -->
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
             <div class="text-xs font-bold text-slate-400">분석 대상 학생 수</div>
             <div id="kpi-student-count" class="text-2xl font-black text-slate-900 mt-1">0명</div>
           </div>
           <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
-            <div class="text-xs font-bold text-slate-400">빈칸 평균 점수 (58점 만점)</div>
+            <div class="text-xs font-bold text-slate-400">빈칸 평균 성취도</div>
             <div id="kpi-blank-avg" class="text-2xl font-black text-emerald-600 mt-1">0.0점 (0%)</div>
           </div>
           <div class="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
@@ -1296,12 +1441,11 @@ function doGet(e) {
           </div>
         </div>
 
-        <!-- Row 2: Question Analysis (Most Correct vs Most Wrong) -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-sm font-black text-rose-700">🚨 최다 오답 문제 TOP 5 (집중 보충 필요)</h4>
-              <span class="text-[11px] text-slate-400">빈칸 1~58번 & 퀴즈 1~5번 통합</span>
+              <span class="text-[11px] text-slate-400">빈칸 & 확인퀴즈 통합</span>
             </div>
             <div id="analytics-worst-questions" class="space-y-2 text-xs"></div>
           </div>
@@ -1309,13 +1453,12 @@ function doGet(e) {
           <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
             <div class="flex items-center justify-between mb-3">
               <h4 class="text-sm font-black text-emerald-700">🌟 최다 정답 문제 TOP 5 (성취도 우수)</h4>
-              <span class="text-[11px] text-slate-400">빈칸 1~58번 & 퀴즈 1~5번 통합</span>
+              <span class="text-[11px] text-slate-400">빈칸 & 확인퀴즈 통합</span>
             </div>
             <div id="analytics-best-questions" class="space-y-2 text-xs"></div>
           </div>
         </div>
 
-        <!-- Row 3: By Class & By Lesson Breakdown -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
           <div class="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm">
             <h4 class="text-sm font-black text-slate-900 mb-3">🏫 반별 평균 성취도 및 오답 정복 비교</h4>
@@ -1332,31 +1475,35 @@ function doGet(e) {
   </div>
 
   <!-- ==========================================
-       APPLICATION LOGIC
+       APPLICATION LOGIC (Default Lesson + AI PDF Slide Generator + Sync Engine)
        ========================================== -->
   <script>
-    // ★ 다른 차시 수업 파일을 만드실 때는 아래 LESSON_ID 문자열만 그 차시 제목으로 변경하세요!
-    const LESSON_ID = "3-2-1 과학 기술과 미래 사회";
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    let LESSON_ID = "3-2-1 과학 기술과 미래 사회";
+    let defaultSlidesHtmlBackup = "";
+    let currentCustomSlideDeck = null; // Holds AI-generated slide JSON when active
 
     let appRole = 'teacher';
     let roomCode = 'SCI2026';
     let studentInfo = { id: '', name: '', classGroup: '미분류' };
     let currentSlide = 0;
-    const totalSlides = 10;
-    const totalBlanksCount = 58;
+    let totalSlides = 10;
+    let totalBlanksCount = 58;
     let slideSyncLocked = true;
 
-    const blankMeta = {};
-    const groupMembers = {};
-    const teacherRevealed = {};
-    const studentInputs = {};
-    const studentCorrect = {};
+    let blankMeta = {};
+    let groupMembers = {};
+    let teacherRevealed = {};
+    let studentInputs = {};
+    let studentCorrect = {};
 
-    // Student Wrong-Answer Notes & Teacher Feedback State
-    const studentWrongNotes = {}; // key: "Q1".."Q5" or "GENERAL" -> text
+    const studentWrongNotes = {};
     let receivedTeacherFeedback = '';
 
-    const quizTitles = [
+    let quizTitles = [
       "1번. 지능정보화 시대 과학 기술 발전 방향",
       "2번. 사물 인터넷(IoT)의 구성과 원격 제어",
       "3번. 인공지능과 인공지능 로봇의 특징",
@@ -1364,9 +1511,9 @@ function doGet(e) {
       "5번. 과학 기술의 한계와 바람직한 준비 자세"
     ];
 
-    const quizSlideMap = [7, 7, 8, 8, 9]; // Slide index (0-based) where Q1~Q5 live
+    let quizSlideMap = [7, 7, 8, 8, 9];
 
-    const quizData = [
+    let quizData = [
       {
         answer: 1,
         explanation: "지능정보화 시대는 인간과 자연에 관한 데이터에서 정보를 추출하고 이를 활용하는 인공지능(AI) 기술 중심으로 발전합니다.",
@@ -1424,12 +1571,15 @@ function doGet(e) {
     const studentQuizCorrect   = { 0: false, 1: false, 2: false, 3: false, 4: false };
     const studentQuizResolved  = { 0: false, 1: false, 2: false, 3: false, 4: false };
 
-    // Key: `${lessonId}_${studentId}_${studentName}`
     const submissionsMap = {};
     let gasWebhookUrl = '';
-    try { gasWebhookUrl = localStorage.getItem('gas_webhook_url') || ''; } catch (e) {}
+    let savedGeminiKey = '';
+    try {
+      gasWebhookUrl = localStorage.getItem('gas_webhook_url') || '';
+      savedGeminiKey = localStorage.getItem('resonance_gemini_api_key') || '';
+    } catch (e) {}
 
-    const slideStrokes = Array.from({ length: totalSlides }, () => []);
+    let slideStrokes = Array.from({ length: 20 }, () => []);
     let wbEnabled = false;
     let isDrawing = false;
     let penColor = '#ef4444';
@@ -1443,6 +1593,7 @@ function doGet(e) {
     let studentConns = [];
 
     window.addEventListener('DOMContentLoaded', () => {
+      defaultSlidesHtmlBackup = document.getElementById('slides-container').innerHTML;
       initBlankMetadata();
       initWhiteboardCanvas();
       initKeyboardNav();
@@ -1450,6 +1601,10 @@ function doGet(e) {
       if (gasWebhookUrl) {
         const input = document.getElementById('gas-webhook-input');
         if (input) input.value = gasWebhookUrl;
+      }
+      if (savedGeminiKey) {
+        const keyInput = document.getElementById('gemini-api-key-input');
+        if (keyInput) keyInput.value = savedGeminiKey;
       }
 
       const cleanBaseUrl = window.location.href.split('?')[0].split('#')[0];
@@ -1473,7 +1628,17 @@ function doGet(e) {
     });
 
     function initBlankMetadata() {
-      document.querySelectorAll('.blank-slot').forEach(slot => {
+      blankMeta = {};
+      groupMembers = {};
+      teacherRevealed = {};
+      studentInputs = {};
+      studentCorrect = {};
+
+      const slots = document.querySelectorAll('.blank-slot');
+      totalBlanksCount = slots.length;
+      document.querySelectorAll('.inline-total-blanks').forEach(el => el.textContent = totalBlanksCount);
+
+      slots.forEach(slot => {
         const id = Number(slot.dataset.id);
         const slideIdx = Number(slot.dataset.slide || 1);
         const ans = (slot.dataset.ans || '').trim();
@@ -1491,6 +1656,9 @@ function doGet(e) {
           groupMembers[group].push(id);
         }
       });
+
+      totalSlides = document.querySelectorAll('.slide-page').length;
+      document.getElementById('total-slide-num').textContent = totalSlides;
     }
 
     function normalizeAnswer(str) {
@@ -1501,7 +1669,6 @@ function doGet(e) {
         .replace(/[.,()·\-_/]/g, '');
     }
 
-    // Automatically parse class group from 5-digit student ID (e.g. 10205 -> 1학년 2반)
     function parseClassGroupFromId(sid) {
       const digits = String(sid).replace(/\D/g, '');
       if (digits.length === 5) {
@@ -1516,6 +1683,520 @@ function doGet(e) {
       return '기본반';
     }
 
+    /*************************************************************
+     * AI PDF TO SLIDE DECK GENERATOR ENGINE (Request 3 Implementation)
+     *************************************************************/
+    function openPdfGeneratorModal() {
+      const modal = document.getElementById('pdf-generator-modal');
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closePdfGeneratorModal() {
+      const modal = document.getElementById('pdf-generator-modal');
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+
+    async function extractPdfPagesAsMultimodal(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      const parts = [];
+      const pageCount = Math.min(pdf.numPages, 6); // Up to 6 pages per worksheet
+
+      for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items.map(item => item.str).join(' ');
+        parts.push({ text: `[학습지 PDF ${pageNum}페이지 추출 텍스트]:\n${pageText}` });
+
+        const viewport = page.getViewport({ scale: 1.35 });
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = viewport.width;
+        tempCanvas.height = viewport.height;
+        await page.render({ canvasContext: tempCanvas.getContext('2d'), viewport }).promise;
+
+        const base64Image = tempCanvas.toDataURL('image/jpeg', 0.78).split(',')[1];
+        parts.push({
+          inline_data: {
+            mime_type: 'image/jpeg',
+            data: base64Image
+          }
+        });
+      }
+      return parts;
+    }
+
+    async function handlePdfSlideGeneration() {
+      const apiKey = (document.getElementById('gemini-api-key-input')?.value || '').trim();
+      const customLessonId = (document.getElementById('new-lesson-id-input')?.value || '').trim();
+      const fileInput = document.getElementById('pdf-file-input');
+      const pdfFile = fileInput?.files?.[0];
+
+      if (!apiKey) {
+        alert('Google Gemini API 키를 입력해 주세요. (우측 상단 링크에서 1분 만에 무료 발급 가능)');
+        return;
+      }
+      if (!pdfFile) {
+        alert('변환할 과학 학습지 PDF 파일을 선택해 주세요.');
+        return;
+      }
+
+      try { localStorage.setItem('resonance_gemini_api_key', apiKey); } catch (e) {}
+
+      const progBox = document.getElementById('pdf-gen-progress-box');
+      const progBar = document.getElementById('pdf-gen-progress-bar');
+      const statusTitle = document.getElementById('pdf-gen-status-title');
+      const stepBadge = document.getElementById('pdf-gen-step-badge');
+      const startBtn = document.getElementById('start-pdf-gen-btn');
+
+      progBox.classList.remove('hidden');
+      startBtn.disabled = true;
+      startBtn.textContent = '⏳ 생성 중...';
+
+      try {
+        // Step 1: Extract PDF Text & Page Images
+        statusTitle.textContent = '1/3 단계: PDF 텍스트 및 그림·표 시각 자료 추출 중...';
+        stepBadge.textContent = '1 / 3';
+        progBar.style.width = '30%';
+        const multimodalParts = await extractPdfPagesAsMultimodal(pdfFile);
+
+        // Step 2: Call Gemini 2.5 Flash API with Structured JSON Schema
+        statusTitle.textContent = '2/3 단계: Gemini AI가 탐구 발문·블룸/DOK·빈칸·확인퀴즈 설계 중...';
+        stepBadge.textContent = '2 / 3';
+        progBar.style.width = '65%';
+
+        const masterPrompt = `
+          당신은 고등학교 10~12학년 과학 수업을 설계하는 수석 교사입니다.
+          제공된 학습지 PDF의 모든 문항, 자료, 표, 그림을 빠짐없이 읽고 아래 규칙에 맞춰 슬라이드 JSON을 생성하세요.
+          1. 개념 슬라이드는 3~6장 정도로 알차게 나누어 구성하고, 각 슬라이드에 학습 목표, 블룸 분류(이해/적용/분석/평가), DOK 수준(1~3), 과학 탐구 흐름 발문(관찰/가설/실험/자료분석/결론 중 1개와 발문 내용)을 포함하세요.
+          2. 학습지의 핵심 괄호/빈칸을 빠짐없이 추출하여 bullets 배열 안에 {{BLANK_1}}, {{BLANK_2}} 형태(번호는 1부터 순차 증가)로 넣고, blanks 배열에 각 번호의 정답(ans), 유사어 배열(alts), 난이도(기본/심화)를 정의하세요.
+          3. 어려운 과학 전문 용어는 glossary 배열에 용어(term)와 고등학생 눈높이의 설명(desc)으로 정리하세요.
+          4. 슬라이드별로 기본 문항과 심화 문항(차별화 과제)을 제시하세요.
+          5. 마무리 개념 확인 4지선다 퀴즈 5문항(quizzes)을 만들고, 정답 인덱스(0~3), 해설(explanation), 각 오답 보기별 맞춤형 힌트(hints 배열 길이 4)를 작성하세요.
+        `;
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [{ text: masterPrompt }, ...multimodalParts] }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                  type: "OBJECT",
+                  properties: {
+                    lessonId: { type: "STRING" },
+                    unitSubtitle: { type: "STRING" },
+                    title: { type: "STRING" },
+                    objectives: { type: "ARRAY", items: { type: "STRING" } },
+                    conceptSlides: {
+                      type: "ARRAY",
+                      items: {
+                        type: "OBJECT",
+                        properties: {
+                          slideTitle: { type: "STRING" },
+                          bloom: { type: "STRING" },
+                          dok: { type: "INTEGER" },
+                          inquiryStage: { type: "STRING" },
+                          inquiryQuestion: { type: "STRING" },
+                          bullets: {
+                            type: "ARRAY",
+                            items: { type: "STRING", description: "빈칸 자리에 {{BLANK_번호}}가 포함된 문장" }
+                          },
+                          basicTask: { type: "STRING" },
+                          advancedTask: { type: "STRING" },
+                          glossary: {
+                            type: "ARRAY",
+                            items: {
+                              type: "OBJECT",
+                              properties: {
+                                term: { type: "STRING" },
+                                desc: { type: "STRING" }
+                              }
+                            }
+                          }
+                        },
+                        required: ["slideTitle", "bloom", "dok", "inquiryStage", "inquiryQuestion", "bullets"]
+                      }
+                    },
+                    blanks: {
+                      type: "ARRAY",
+                      items: {
+                        type: "OBJECT",
+                        properties: {
+                          id: { type: "INTEGER" },
+                          ans: { type: "STRING" },
+                          alts: { type: "ARRAY", items: { type: "STRING" } },
+                          level: { type: "STRING" }
+                        },
+                        required: ["id", "ans"]
+                      }
+                    },
+                    quizzes: {
+                      type: "ARRAY",
+                      items: {
+                        type: "OBJECT",
+                        properties: {
+                          title: { type: "STRING" },
+                          question: { type: "STRING" },
+                          options: { type: "ARRAY", items: { type: "STRING" } },
+                          answer: { type: "INTEGER" },
+                          explanation: { type: "STRING" },
+                          hints: { type: "ARRAY", items: { type: "STRING" } }
+                        },
+                        required: ["question", "options", "answer", "explanation", "hints"]
+                      }
+                    }
+                  },
+                  required: ["title", "objectives", "conceptSlides", "blanks", "quizzes"]
+                }
+              }
+            })
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Gemini API 호출 실패 (${response.status}). API 키를 확인해 주세요.`);
+        }
+
+        const result = await response.json();
+        const rawJsonText = result.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!rawJsonText) throw new Error('AI 응답에서 슬라이드 데이터를 추출하지 못했습니다.');
+
+        const deck = JSON.parse(rawJsonText);
+        if (customLessonId) deck.lessonId = customLessonId;
+        else if (!deck.lessonId) deck.lessonId = deck.title;
+
+        // Step 3: Render Dynamic Slide Deck & Sync to Students + Google Sheets
+        statusTitle.textContent = '3/3 단계: 양방향 슬라이드 렌더링 및 학생 화면 동기화 중...';
+        stepBadge.textContent = '3 / 3';
+        progBar.style.width = '100%';
+
+        applyCustomSlideDeck(deck, true);
+
+        setTimeout(() => {
+          closePdfGeneratorModal();
+          progBox.classList.add('hidden');
+          startBtn.disabled = false;
+          startBtn.textContent = '🚀 PDF 분석하여 수업 슬라이드 자동 생성하기';
+          alert(`🎉 [${deck.title}] 슬라이드 자동 생성이 완료되었습니다!\n• 생성된 총 빈칸 수: ${deck.blanks.length}개\n• 마무리 확인 퀴즈: 5문항`);
+        }, 500);
+
+      } catch (err) {
+        alert('슬라이드 자동 생성 중 오류가 발생했습니다:\n' + err.message);
+        progBox.classList.add('hidden');
+        startBtn.disabled = false;
+        startBtn.textContent = '🚀 PDF 분석하여 수업 슬라이드 자동 생성하기';
+      }
+    }
+
+    function applyCustomSlideDeck(deck, shouldBroadcast = false) {
+      currentCustomSlideDeck = deck;
+      LESSON_ID = deck.lessonId || deck.title || "AI_생성_과학수업";
+      document.getElementById('entry-lesson-title').textContent = deck.title;
+
+      const blankLookup = {};
+      (deck.blanks || []).forEach(b => {
+        blankLookup[b.id] = b;
+      });
+
+      const replaceBlanksInText = (text, slideIdx) => {
+        return escapeHtml(text).replace(/\{\{BLANK_(\d+)\}\}/g, (_, numStr) => {
+          const bId = Number(numStr);
+          const bInfo = blankLookup[bId] || { id: bId, ans: '정답', alts: [] };
+          const altStr = (bInfo.alts || []).join(',');
+          return `<span class="blank-slot" data-id="${bId}" data-slide="${slideIdx}" data-ans="${escapeHtml(bInfo.ans)}" data-alt="${escapeHtml(altStr)}"></span>`;
+        });
+      };
+
+      let slidesHtml = '';
+
+      // 1) Cover Slide (index 0)
+      const objHtml = (deck.objectives || []).map((obj, i) => `
+        <div class="flex items-start gap-3">
+          <span class="w-6 h-6 rounded-full bg-amber-400 text-slate-900 font-black text-xs flex items-center justify-center shrink-0 mt-0.5">${i + 1}</span>
+          <p class="text-base md:text-lg font-bold leading-snug">${escapeHtml(obj)}</p>
+        </div>
+      `).join('');
+
+      slidesHtml += `
+        <section class="slide-page active" data-slide="0">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b-2 border-slate-900">
+              <div class="flex items-center gap-2">
+                <span class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-black text-xs">고등학교 과학 · AI 자동 생성 슬라이드</span>
+                <span class="text-sm font-bold text-slate-600">${escapeHtml(deck.unitSubtitle || LESSON_ID)}</span>
+              </div>
+              <span class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-extrabold">블룸 & DOK 맞춤형 설계</span>
+            </div>
+            <div class="mt-6 bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-3xl p-8 shadow-xl">
+              <p class="text-indigo-300 font-extrabold text-sm mb-1">${escapeHtml(LESSON_ID)}</p>
+              <h2 class="text-3xl md:text-4xl font-black tracking-tight mb-5">${escapeHtml(deck.title)}</h2>
+              <div class="bg-white/10 backdrop-blur rounded-2xl p-5 border border-white/15 space-y-3">
+                <div class="text-xs font-extrabold uppercase tracking-wider text-amber-300">이번 시간 학습 목표</div>
+                ${objHtml}
+              </div>
+            </div>
+          </div>
+          <div class="p-4 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-between text-xs font-bold text-slate-600">
+            <span>📌 학습지 PDF의 모든 문항·탐구 발문·빈칸(${(deck.blanks || []).length}개)·확인 퀴즈(5문항)가 슬라이드로 구성되었습니다.</span>
+            <span>표지 슬라이드</span>
+          </div>
+        </section>
+      `;
+
+      // 2) Concept & Inquiry Slides (index 1 .. N)
+      const conceptSlides = deck.conceptSlides || [];
+      conceptSlides.forEach((cSlide, idx) => {
+        const sIndex = idx + 1;
+        const bulletsHtml = (cSlide.bullets || []).map(line => `
+          <li class="p-3 rounded-xl bg-white border border-slate-200 shadow-sm leading-loose text-sm md:text-base font-medium text-slate-800">
+            • ${replaceBlanksInText(line, sIndex)}
+          </li>
+        `).join('');
+
+        const glossaryHtml = (cSlide.glossary || []).map(g => `
+          <span class="sci-term px-2.5 py-1 rounded-lg bg-indigo-50 border border-indigo-200 text-xs" data-desc="${escapeHtml(g.desc)}">📖 ${escapeHtml(g.term)}</span>
+        `).join(' ');
+
+        slidesHtml += `
+          <section class="slide-page" data-slide="${sIndex}">
+            <div>
+              <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-slate-200">
+                <h2 class="text-xl md:text-2xl font-black text-slate-900">${escapeHtml(cSlide.slideTitle)}</h2>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 text-xs font-extrabold">블룸: ${escapeHtml(cSlide.bloom || '이해·적용')}</span>
+                  <span class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold">DOK Level ${cSlide.dok || 2}</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 mt-4">
+                <div class="lg:col-span-8 space-y-2.5">
+                  <ul class="space-y-2">${bulletsHtml}</ul>
+                  ${glossaryHtml ? `<div class="pt-2 flex flex-wrap items-center gap-2"><span class="text-xs font-bold text-slate-400">어려운 용어 주석(마우스 오버):</span>${glossaryHtml}</div>` : ''}
+                </div>
+                <div class="lg:col-span-4 space-y-3">
+                  <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200">
+                    <div class="text-xs font-extrabold text-emerald-700 mb-1">📗 기본 과제 (핵심 개념 확인)</div>
+                    <p class="text-xs font-semibold text-slate-800 leading-relaxed">${escapeHtml(cSlide.basicTask || '본문의 빈칸을 채우며 핵심 개념을 정리해 보세요.')}</p>
+                  </div>
+                  <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200">
+                    <div class="text-xs font-extrabold text-rose-700 mb-1">📕 심화 과제 (자료 해석·적용)</div>
+                    <p class="text-xs font-semibold text-slate-800 leading-relaxed">${escapeHtml(cSlide.advancedTask || '탐구 발문에 대한 자신의 가설과 근거를 친구와 토의해 보세요.')}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-slate-900 text-white text-xs flex flex-wrap items-center justify-between gap-2 mt-3">
+              <div>
+                <span class="px-2 py-0.5 rounded bg-amber-400 text-slate-950 font-black mr-1.5">🔬 과학 탐구 발문 [${escapeHtml(cSlide.inquiryStage || '자료 분석')}]</span>
+                <span>${escapeHtml(cSlide.inquiryQuestion || '')}</span>
+              </div>
+              <span class="font-bold text-slate-400">개념 슬라이드 ${sIndex}</span>
+            </div>
+          </section>
+        `;
+      });
+
+      // 3) 3 Quiz Slides (Q1~Q2, Q3~Q4, Q5 + Grading Report Card)
+      const qSlideStart = conceptSlides.length + 1;
+      quizSlideMap = [qSlideStart, qSlideStart, qSlideStart + 1, qSlideStart + 1, qSlideStart + 2];
+
+      const rawQuizzes = (deck.quizzes || []).slice(0, 5);
+      while (rawQuizzes.length < 5) {
+        rawQuizzes.push(quizData[rawQuizzes.length]);
+      }
+
+      quizData = rawQuizzes.map((q, idx) => ({
+        answer: typeof q.answer === 'number' ? q.answer : 0,
+        explanation: q.explanation || '정답입니다!',
+        hints: Array.isArray(q.hints) && q.hints.length >= 4 ? q.hints : ['다시 생각해보세요.', '다시 생각해보세요.', '다시 생각해보세요.', '다시 생각해보세요.'],
+        question: q.question || `확인 문제 ${idx + 1}`,
+        options: Array.isArray(q.options) && q.options.length >= 4 ? q.options : ['① 보기 1', '② 보기 2', '③ 보기 3', '④ 보기 4']
+      }));
+
+      quizTitles = rawQuizzes.map((q, idx) => `${idx + 1}번. ${q.title || (q.question || '').slice(0, 22)}`);
+
+      const buildQuizCardHtml = (qIdx) => {
+        const qObj = quizData[qIdx];
+        const optsButtons = qObj.options.map((optText, oIdx) => `
+          <button type="button" onclick="selectQuizOption(${qIdx}, ${oIdx})" class="quiz-opt w-full text-left p-3 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 text-xs md:text-sm font-semibold transition">${escapeHtml(optText)}</button>
+        `).join('');
+        return `
+          <div class="rounded-2xl border border-slate-200 bg-slate-50 p-5 flex flex-col justify-between" id="quiz-box-${qIdx}">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-extrabold text-indigo-600">QUESTION 0${qIdx + 1}</span>
+                <span id="quiz-badge-${qIdx}" class="text-[11px] font-bold text-slate-400">답안 미선택</span>
+              </div>
+              <h3 class="text-base md:text-lg font-extrabold text-slate-900 mt-1 mb-4">${escapeHtml(qObj.question)}</h3>
+              <div class="space-y-2" data-quiz="${qIdx}">${optsButtons}</div>
+            </div>
+            <div id="quiz-fb-${qIdx}" class="hidden mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold"></div>
+          </div>
+        `;
+      };
+
+      // Quiz Slide A (Q1, Q2)
+      slidesHtml += `
+        <section class="slide-page" data-slide="${qSlideStart}">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (1/3) — 1번·2번</h2>
+              <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+                선택 현황: <strong class="quiz-selected-counter">0</strong> / 5문항 선택됨
+              </span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+              ${buildQuizCardHtml(0)}
+              ${buildQuizCardHtml(1)}
+            </div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+            <span>💡 답안을 선택한 뒤 다음 슬라이드로 이동하세요.</span>
+            <button type="button" onclick="changeSlide(1)" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-extrabold text-xs cursor-pointer">3·4번 풀러 가기 ▶</button>
+          </div>
+        </section>
+      `;
+
+      // Quiz Slide B (Q3, Q4)
+      slidesHtml += `
+        <section class="slide-page" data-slide="${qSlideStart + 1}">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (2/3) — 3번·4번</h2>
+              <span class="text-xs font-extrabold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full">
+                선택 현황: <strong class="quiz-selected-counter">0</strong> / 5문항 선택됨
+              </span>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mt-5">
+              ${buildQuizCardHtml(2)}
+              ${buildQuizCardHtml(3)}
+            </div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex items-center justify-between">
+            <span>📌 다음 슬라이드에서 5번까지 선택하고 일괄 채점하세요.</span>
+            <button type="button" onclick="changeSlide(1)" class="px-3 py-1.5 rounded-lg bg-indigo-600 text-white font-extrabold text-xs cursor-pointer">5번 풀고 채점하기 ▶</button>
+          </div>
+        </section>
+      `;
+
+      // Quiz Slide C (Q5 + Final Grading & Wrong-Note Card)
+      slidesHtml += `
+        <section class="slide-page" data-slide="${qSlideStart + 2}">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-200">
+              <h2 class="text-xl md:text-2xl font-black text-slate-900">🎯 마무리 개념 확인 퀴즈 (3/3) & 오답노트·제출</h2>
+              <button type="button" onclick="openQuizStatsModal()" class="teacher-only-quiz-btn px-3.5 py-1.5 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-extrabold shadow cursor-pointer">
+                🏆 문항별 정답자 수 & 최다 정답 학생 공개하기
+              </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-5 mt-4">
+              <div class="md:col-span-7">${buildQuizCardHtml(4)}</div>
+              <div class="md:col-span-5 rounded-2xl bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-5 flex flex-col justify-between">
+                <div>
+                  <div class="flex items-center justify-between">
+                    <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-extrabold">퀴즈 채점 & 오답노트 리포트</span>
+                    <span id="quiz-Retry-status-pill" class="text-[11px] font-bold text-amber-300">채점 대기 중</span>
+                  </div>
+                  <div class="mt-3 p-3 rounded-xl bg-white/10 border border-white/10">
+                    <div class="text-[11px] text-slate-300 font-bold mb-2">문항별 상태 (클릭 시 이동)</div>
+                    <div class="grid grid-cols-5 gap-1.5 text-center text-xs font-extrabold">
+                      <button type="button" onclick="jumpToQuizSlide(0)" id="mini-q-0" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">1번: -</button>
+                      <button type="button" onclick="jumpToQuizSlide(1)" id="mini-q-1" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">2번: -</button>
+                      <button type="button" onclick="jumpToQuizSlide(2)" id="mini-q-2" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">3번: -</button>
+                      <button type="button" onclick="jumpToQuizSlide(3)" id="mini-q-3" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">4번: -</button>
+                      <button type="button" onclick="jumpToQuizSlide(4)" id="mini-q-4" class="py-1.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-300 cursor-pointer">5번: -</button>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3 my-3">
+                    <div class="p-3 rounded-xl bg-white/10 border border-white/10">
+                      <div class="text-xs text-slate-300">빈칸 완성도</div>
+                      <div class="text-xl font-black text-emerald-400 mt-0.5"><span id="final-blank-score">0</span> <span class="text-xs font-bold text-slate-300">/ <span class="inline-total-blanks">${(deck.blanks || []).length}</span></span></div>
+                    </div>
+                    <div class="p-3 rounded-xl bg-white/10 border border-white/10">
+                      <div class="text-xs text-slate-300">퀴즈 점수 (첫 채점)</div>
+                      <div class="text-xl font-black text-amber-400 mt-0.5"><span id="final-quiz-score">-</span> <span class="text-xs font-bold text-slate-300">/ 5</span></div>
+                    </div>
+                  </div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">오늘 수업 핵심 한 줄 성찰</label>
+                  <textarea id="student-reflection" rows="2" placeholder="오늘 배운 핵심 개념을 정리해 보세요." class="w-full p-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs placeholder:text-slate-400 focus:outline-none"></textarea>
+                </div>
+                <div class="space-y-2 mt-3">
+                  <button id="grade-quiz-btn" type="button" onclick="gradeAndSubmitQuiz()" class="w-full py-2.5 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-black text-xs shadow-lg cursor-pointer">✅ 1단계: 마무리 퀴즈 채점 및 제출하기</button>
+                  <button type="button" onclick="openStudentWrongNoteModal()" class="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-lg cursor-pointer">📓 2단계: 내 오답 다시 보기 & 오답노트</button>
+                  <button id="student-final-submit-btn" type="button" onclick="submitStudentWork(true)" class="w-full py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg cursor-pointer">📤 3단계: 전체 작성 내용 최종 전송하기</button>
+                  <button id="teacher-final-stat-btn" type="button" onclick="openQuizStatsModal()" class="hidden w-full py-3 rounded-xl bg-purple-500 hover:bg-purple-400 text-white font-black text-xs shadow-lg cursor-pointer">🏆 [교사용] 문항별 정답자 수 & 최다 정답자 공개</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-100 border border-slate-200 text-xs text-slate-600 flex justify-between">
+            <span>👏 채점 후 [내 오답 다시 보기 & 오답노트]를 눌러 복습하세요!</span>
+            <span class="font-bold">Final Slide</span>
+          </div>
+        </section>
+      `;
+
+      document.getElementById('slides-container').innerHTML = slidesHtml;
+
+      // Reset quiz state for the new deck
+      for (let i = 0; i < 5; i++) {
+        quizSelections[i] = null;
+        studentQuizCorrect[i] = false;
+        studentQuizResolved[i] = false;
+      }
+      quizInitialSubmitted = false;
+
+      initBlankMetadata();
+      renderBlanksForRole();
+      goToSlide(0, false);
+
+      if (appRole === 'teacher' && shouldBroadcast) {
+        broadcastMessage({
+          type: 'CUSTOM_SLIDE_DECK',
+          deck: currentCustomSlideDeck
+        });
+        if (gasWebhookUrl) {
+          fetch(gasWebhookUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'SAVE_GENERATED_SLIDES',
+              lessonId: LESSON_ID,
+              roomCode,
+              title: deck.title,
+              slideDeck: deck
+            })
+          }).catch(() => {});
+        }
+      }
+    }
+
+    function resetToDefaultLesson() {
+      currentCustomSlideDeck = null;
+      LESSON_ID = "3-2-1 과학 기술과 미래 사회";
+      document.getElementById('slides-container').innerHTML = defaultSlidesHtmlBackup;
+      quizSlideMap = [7, 7, 8, 8, 9];
+      initBlankMetadata();
+      renderBlanksForRole();
+      goToSlide(0, true);
+      closePdfGeneratorModal();
+    }
+
+    function jumpToQuizSlide(qIdx) {
+      const target = quizSlideMap[qIdx] || 7;
+      goToSlide(target, false);
+    }
+
+    /*************************************************************
+     * SESSION & ROLE MANAGEMENT
+     *************************************************************/
     function openStudentEntryModal() {
       document.getElementById('entry-room-badge').textContent = `방 코드: ${roomCode}`;
       document.getElementById('student-room-input').value = roomCode;
@@ -1540,6 +2221,7 @@ function doGet(e) {
       badge.textContent = '교사 모드';
       badge.className = 'px-2.5 py-1 rounded-lg text-xs font-extrabold bg-indigo-600 text-white';
 
+      document.getElementById('pdf-generator-btn').classList.remove('hidden');
       document.getElementById('switch-to-student-btn').classList.remove('hidden');
       document.getElementById('qr-invite-btn').classList.remove('hidden');
       document.getElementById('sync-lock-btn').classList.remove('hidden');
@@ -1551,8 +2233,8 @@ function doGet(e) {
       document.getElementById('student-top-actions').classList.remove('flex');
 
       document.querySelectorAll('.teacher-only-quiz-btn').forEach(btn => btn.classList.remove('hidden'));
-      document.getElementById('teacher-final-stat-btn').classList.remove('hidden');
-      document.getElementById('student-final-submit-btn').classList.add('hidden');
+      document.getElementById('teacher-final-stat-btn')?.classList.remove('hidden');
+      document.getElementById('student-final-submit-btn')?.classList.add('hidden');
 
       renderBlanksForRole();
       goToSlide(currentSlide, false);
@@ -1577,6 +2259,7 @@ function doGet(e) {
       badge.textContent = `${studentInfo.classGroup} · ${studentInfo.id} ${studentInfo.name}`;
       badge.className = 'px-2.5 py-1 rounded-lg text-xs font-extrabold bg-emerald-600 text-white';
 
+      document.getElementById('pdf-generator-btn').classList.add('hidden');
       document.getElementById('switch-to-student-btn').classList.add('hidden');
       document.getElementById('qr-invite-btn').classList.add('hidden');
       document.getElementById('sync-lock-btn').classList.add('hidden');
@@ -1588,8 +2271,8 @@ function doGet(e) {
       document.getElementById('student-top-actions').classList.add('flex');
 
       document.querySelectorAll('.teacher-only-quiz-btn').forEach(btn => btn.classList.add('hidden'));
-      document.getElementById('teacher-final-stat-btn').classList.add('hidden');
-      document.getElementById('student-final-submit-btn').classList.remove('hidden');
+      document.getElementById('teacher-final-stat-btn')?.classList.add('hidden');
+      document.getElementById('student-final-submit-btn')?.classList.remove('hidden');
 
       renderBlanksForRole();
       goToSlide(currentSlide, false);
@@ -1696,10 +2379,14 @@ function doGet(e) {
       });
     }
 
+    /*************************************************************
+     * BLANKS ENGINE
+     *************************************************************/
     function renderBlanksForRole() {
       document.querySelectorAll('.blank-slot').forEach(slot => {
         const id = Number(slot.dataset.id);
         const meta = blankMeta[id];
+        if (!meta) return;
         slot.innerHTML = '';
 
         if (appRole === 'teacher') {
@@ -1844,7 +2531,7 @@ function doGet(e) {
     }
 
     function goToSlide(index, shouldBroadcast = true) {
-      currentSlide = index;
+      currentSlide = Math.max(0, Math.min(totalSlides - 1, index));
       document.querySelectorAll('.slide-page').forEach((page, idx) => {
         page.classList.toggle('active', idx === currentSlide);
       });
@@ -1866,12 +2553,12 @@ function doGet(e) {
       slideSyncLocked = !slideSyncLocked;
       const btn = document.getElementById('sync-lock-btn');
       if (slideSyncLocked) {
-        btn.textContent = '🔒 화면동기화 ON';
-        btn.className = 'px-2.5 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold';
+        btn.textContent = '🔒 동기화 ON';
+        btn.className = 'px-2 py-1.5 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 text-xs font-bold';
         broadcastMessage({ type: 'SYNC_SLIDE', slide: currentSlide });
       } else {
-        btn.textContent = '🔓 자율탐색 허용';
-        btn.className = 'px-2.5 py-1.5 rounded-lg bg-slate-700 border border-slate-600 text-slate-300 text-xs font-bold';
+        btn.textContent = '🔓 자율탐색';
+        btn.className = 'px-2 py-1.5 rounded-lg bg-slate-700 border border-slate-600 text-slate-300 text-xs font-bold';
       }
     }
 
@@ -1889,13 +2576,15 @@ function doGet(e) {
         2: 'STEP 2 (인터넷 통신): 감지한 데이터를 인터넷을 통해 클라우드와 사용자 기기로 실시간 송수신합니다.',
         3: 'STEP 3 (원격 파악·제어): 소프트웨어가 데이터를 분석해 사용자가 원격으로 상태를 파악하고 자동 제어합니다.'
       };
-      document.getElementById('iot-step-caption').textContent = captions[step];
+      const capEl = document.getElementById('iot-step-caption');
+      if (capEl) capEl.textContent = captions[step];
       [1, 2, 3].forEach(n => {
         const btn = document.getElementById(`iot-step-${n}`);
+        if (!btn) return;
         if (n === step) {
-          btn.className = 'p-3.5 rounded-xl bg-indigo-600/50 border-2 border-amber-400 text-left transition scale-[1.02]';
+          btn.className = 'p-3 rounded-xl bg-indigo-600/50 border-2 border-amber-400 text-left transition scale-[1.02]';
         } else {
-          btn.className = 'p-3.5 rounded-xl bg-slate-800 border-2 border-slate-700 text-left transition';
+          btn.className = 'p-3 rounded-xl bg-slate-800 border-2 border-slate-700 text-left transition';
         }
       });
     }
@@ -1926,6 +2615,7 @@ function doGet(e) {
 
       quizSelections[qIdx] = optIdx;
       const container = document.querySelector(`[data-quiz="${qIdx}"]`);
+      if (!container) return;
       const buttons = container.querySelectorAll('.quiz-opt');
       const badge = document.getElementById(`quiz-badge-${qIdx}`);
 
@@ -1987,10 +2677,9 @@ function doGet(e) {
       }
 
       if (unselected.length > 0) {
-        alert(`아직 선택하지 않은 문항이 있습니다: ${unselected.join(', ')}\n8~10페이지에서 5문항의 답을 모두 선택한 후 채점해 주세요!`);
+        alert(`아직 선택하지 않은 문항이 있습니다: ${unselected.join(', ')}\n5문항의 답을 모두 선택한 후 채점해 주세요!`);
         const firstMissing = Number(unselected[0].replace('번', '')) - 1;
-        if (firstMissing <= 1) goToSlide(7, false);
-        else if (firstMissing <= 3) goToSlide(8, false);
+        jumpToQuizSlide(firstMissing);
         return;
       }
 
@@ -2034,7 +2723,7 @@ function doGet(e) {
           const tag = studentQuizCorrect[qIdx]
             ? '<span class="text-emerald-700 font-black">[첫 채점 정답 — 공식 점수 반영 🎉]</span>'
             : '<span class="text-amber-700 font-extrabold">[재도전으로 정답 찾기 성공! (공식 점수는 첫 채점 기준)]</span>';
-          fb.innerHTML = `⭕ <strong>정답입니다!</strong> ${tag}<br>${q.explanation}`;
+          fb.innerHTML = `⭕ <strong>정답입니다!</strong> ${tag}<br>${escapeHtml(q.explanation)}`;
         } else {
           if (isFirstGrading) studentQuizCorrect[qIdx] = false;
           wrongNumbers.push(`${qIdx + 1}번`);
@@ -2052,8 +2741,9 @@ function doGet(e) {
             badge.className = 'text-[11px] font-extrabold text-rose-700 bg-rose-100 px-2.5 py-0.5 rounded-full';
           }
 
+          const hintMsg = (q.hints && q.hints[chosen]) ? q.hints[chosen] : '핵심 개념을 다시 떠올려 다른 보기를 골라보세요.';
           fb.className = 'mt-3 p-3.5 rounded-xl text-xs md:text-sm font-bold bg-amber-50 border border-amber-300 text-amber-900';
-          fb.innerHTML = `❌ <strong>${chosen + 1}번은 오답입니다.</strong><br>💡 <strong>힌트:</strong> ${q.hints[chosen]}<br><span class="underline text-indigo-700">위 보기 중 다른 답을 다시 선택한 뒤 [오답 문항 다시 채점하기]를 눌러 정답을 찾아보세요!</span>`;
+          fb.innerHTML = `❌ <strong>${chosen + 1}번은 오답입니다.</strong><br>💡 <strong>힌트:</strong> ${escapeHtml(hintMsg)}<br><span class="underline text-indigo-700">위 보기 중 다른 답을 다시 선택한 뒤 [오답 문항 다시 채점하기]를 눌러 정답을 찾아보세요!</span>`;
         }
       }
 
@@ -2139,12 +2829,11 @@ function doGet(e) {
     }
 
     function renderStudentWrongNoteModalContent() {
-      // 1) Wrong or unfilled blanks
       const wrongBlankIds = Object.keys(blankMeta).map(Number).filter(id => !studentCorrect[id]);
       const blankContainer = document.getElementById('student-wrong-blanks-list');
 
       if (wrongBlankIds.length === 0) {
-        blankContainer.innerHTML = `<div class="text-xs font-extrabold text-emerald-700">🎉 58개 빈칸을 모두 완벽하게 채웠습니다!</div>`;
+        blankContainer.innerHTML = `<div class="text-xs font-extrabold text-emerald-700">🎉 ${totalBlanksCount}개 빈칸을 모두 완벽하게 채웠습니다!</div>`;
       } else {
         blankContainer.innerHTML = wrongBlankIds.map(id => {
           const meta = blankMeta[id];
@@ -2157,14 +2846,13 @@ function doGet(e) {
         }).join('');
       }
 
-      // 2) Wrong Quiz items (based on initial grading OR currently unresolved)
       const quizContainer = document.getElementById('student-wrong-quiz-list');
       const wrongQIndices = [0, 1, 2, 3, 4].filter(i => !studentQuizCorrect[i]);
 
       if (!quizInitialSubmitted) {
         quizContainer.innerHTML = `
           <div class="p-4 rounded-2xl bg-slate-100 text-slate-600 text-xs font-bold">
-            아직 10페이지에서 [마무리 퀴즈 채점 및 제출하기]를 누르지 않았습니다. 먼저 퀴즈를 풀고 채점해 보세요!
+            아직 마지막 페이지에서 [마무리 퀴즈 채점 및 제출하기]를 누르지 않았습니다. 먼저 퀴즈를 풀고 채점해 보세요!
           </div>
         `;
       } else if (wrongQIndices.length === 0) {
@@ -2184,7 +2872,7 @@ function doGet(e) {
             <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
-                  <span class="text-xs font-black text-rose-700">${quizTitles[qIdx]}</span>
+                  <span class="text-xs font-black text-rose-700">${escapeHtml(quizTitles[qIdx])}</span>
                   ${resolvedBadge}
                 </div>
                 <button type="button" onclick="jumpToSlideAndHighlightQuiz(${qIdx})" class="px-3 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold cursor-pointer">
@@ -2255,7 +2943,7 @@ function doGet(e) {
         return `
           <div class="p-3 rounded-xl bg-white border border-slate-200">
             <div class="flex items-center justify-between text-xs font-extrabold mb-1.5">
-              <span class="text-slate-800">${title}</span>
+              <span class="text-slate-800">${escapeHtml(title)}</span>
               <span class="text-indigo-600">첫 채점 정답 ${count}명 (${pct}%)</span>
             </div>
             <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
@@ -2294,7 +2982,7 @@ function doGet(e) {
               <span>${escapeHtml(st.studentId)} ${escapeHtml(st.studentName)}</span>
             </div>
             <div class="font-black text-amber-300">
-              퀴즈(초시) ${st.quizScore}/5 <span class="text-slate-300 font-semibold">(빈칸 ${st.blankScore}/58)</span>
+              퀴즈(초시) ${st.quizScore}/5 <span class="text-slate-300 font-semibold">(빈칸 ${st.blankScore}/${st.totalBlanks || totalBlanksCount})</span>
             </div>
           </div>
         `;
@@ -2342,6 +3030,7 @@ function doGet(e) {
           highlighter: penHighlighter,
           points: [pt]
         };
+        if (!slideStrokes[currentSlide]) slideStrokes[currentSlide] = [];
         slideStrokes[currentSlide].push(currentStroke);
         redrawSlideStrokes();
       });
@@ -2416,13 +3105,13 @@ function doGet(e) {
       if (wbEnabled) {
         canvas.classList.add('drawing-enabled');
         btn.textContent = '✏️ 판서 ON';
-        btn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-extrabold bg-amber-500 text-slate-950';
+        btn.className = 'px-2 py-1.5 rounded-lg text-xs font-extrabold bg-amber-500 text-slate-950';
         tools.classList.remove('hidden');
         tools.classList.add('flex');
       } else {
         canvas.classList.remove('drawing-enabled');
         btn.textContent = '✏️ 판서 OFF';
-        btn.className = 'px-2.5 py-1.5 rounded-lg text-xs font-bold bg-slate-700 text-slate-200';
+        btn.className = 'px-2 py-1.5 rounded-lg text-xs font-bold bg-slate-700 text-slate-200';
         tools.classList.add('hidden');
         tools.classList.remove('flex');
       }
@@ -2484,7 +3173,8 @@ function doGet(e) {
                 type: 'FULL_TEACHER_STATE',
                 slide: currentSlide,
                 strokes: slideStrokes,
-                webhook: gasWebhookUrl
+                webhook: gasWebhookUrl,
+                customDeck: currentCustomSlideDeck
               });
             });
           });
@@ -2537,18 +3227,22 @@ function doGet(e) {
       if (!msg || !msg.type) return;
 
       if (appRole === 'student') {
-        if (msg.type === 'SYNC_SLIDE') {
+        if (msg.type === 'CUSTOM_SLIDE_DECK' && msg.deck) {
+          applyCustomSlideDeck(msg.deck, false);
+        } else if (msg.type === 'SYNC_SLIDE') {
           goToSlide(msg.slide, false);
         } else if (msg.type === 'WB_STROKE') {
+          if (!slideStrokes[msg.slide]) slideStrokes[msg.slide] = [];
           slideStrokes[msg.slide].push(msg.stroke);
           if (msg.slide === currentSlide) redrawSlideStrokes();
         } else if (msg.type === 'WB_CLEAR') {
           slideStrokes[msg.slide] = [];
           if (msg.slide === currentSlide) redrawSlideStrokes();
         } else if (msg.type === 'FULL_TEACHER_STATE') {
+          if (msg.customDeck) applyCustomSlideDeck(msg.customDeck, false);
           goToSlide(msg.slide, false);
           if (msg.strokes) {
-            for (let i = 0; i < totalSlides; i++) slideStrokes[i] = msg.strokes[i] || [];
+            slideStrokes = msg.strokes;
             redrawSlideStrokes();
           }
           if (msg.webhook) gasWebhookUrl = msg.webhook;
@@ -2572,7 +3266,7 @@ function doGet(e) {
     }
 
     /*************************************************************
-     * STUDENT SUBMISSION (Includes Exact Screenshot Fields + Wrong Note)
+     * STUDENT SUBMISSION
      *************************************************************/
     function submitStudentWork(isManualClick = false) {
       if (appRole !== 'student') return;
@@ -2593,7 +3287,6 @@ function doGet(e) {
         .map(Number)
         .filter(id => !studentCorrect[id]);
 
-      // Exact formatted strings matching user's screenshot
       const quizDetailText = !quizInitialSubmitted
         ? "채점 전"
         : [0, 1, 2, 3, 4].map(i => `${i + 1}:${studentQuizCorrect[i] ? 'O' : 'X'}`).join(' ');
@@ -2604,7 +3297,6 @@ function doGet(e) {
 
       const wrongBlanksText = wrongBlankIds.length === 0 ? "전 문항 정답" : wrongBlankIds.join(', ');
 
-      // Format student wrong notes
       const noteEntries = Object.entries(studentWrongNotes).filter(([_, val]) => val && val.trim().length > 0);
       const wrongNoteCount = noteEntries.length;
       const wrongNoteText = noteEntries.map(([k, v]) => `[${k}] ${v}`).join(' | ');
@@ -2655,7 +3347,7 @@ function doGet(e) {
           msg.classList.remove('hidden');
           setTimeout(() => msg.classList.add('hidden'), 3500);
         }
-        alert(`선생님께 전송되었습니다!\n• 빈칸 점수: ${blankScore} / ${totalBlanksCount}\n• 퀴즈 초시 점수: ${quizInitialSubmitted ? quizScore + ' / 5' : '미채점'}\n• 오답 정복 현황: ${conquestText}\n• 오답노트 작성: ${wrongNoteCount}건`);
+        alert(`선생님께 전송되었습니다!\n• 수업 차시: ${LESSON_ID}\n• 빈칸 점수: ${blankScore} / ${totalBlanksCount}\n• 퀴즈 초시 점수: ${quizInitialSubmitted ? quizScore + ' / 5' : '미채점'}\n• 오답 정복 현황: ${conquestText}`);
       }
     }
 
@@ -2666,7 +3358,6 @@ function doGet(e) {
       if (!data) return;
       const lessonKey = data.lessonId || LESSON_ID;
       const key = `${lessonKey}_${data.studentId}_${data.studentName}`;
-      // Preserve existing teacher feedback if already written
       if (submissionsMap[key]?.teacherFeedback && !data.teacherFeedback) {
         data.teacherFeedback = submissionsMap[key].teacherFeedback;
       }
@@ -2694,14 +3385,12 @@ function doGet(e) {
 
       item.teacherFeedback = fbText;
 
-      // 1) Send live to Student screen via PeerJS / BroadcastChannel
       broadcastMessage({
         type: 'TEACHER_FEEDBACK_TO_STUDENT',
         studentId: item.studentId,
         feedback: fbText
       });
 
-      // 2) Update Google Sheet row if webhook is configured
       if (gasWebhookUrl) {
         fetch(gasWebhookUrl, {
           method: 'POST',
@@ -2828,7 +3517,7 @@ function doGet(e) {
             </td>
             <td class="py-2.5 px-2.5 font-bold">${escapeHtml(item.studentId)}</td>
             <td class="py-2.5 px-2.5 font-extrabold text-indigo-900">${escapeHtml(item.studentName)}</td>
-            <td class="py-2.5 px-2.5 font-extrabold text-emerald-700">${item.blankScore} / ${item.totalBlanks || 58}</td>
+            <td class="py-2.5 px-2.5 font-extrabold text-emerald-700">${item.blankScore} / ${item.totalBlanks || totalBlanksCount}</td>
             <td class="py-2.5 px-2.5 font-extrabold text-amber-700">${item.quizInitialSubmitted ? item.quizScore + ' / 5' : '미채점'}</td>
             <td class="py-2.5 px-2.5 leading-relaxed">${qBadges}</td>
             <td class="py-2.5 px-2.5">${retryBadge}</td>
@@ -2865,10 +3554,9 @@ function doGet(e) {
         return;
       }
 
-      // 1) KPI Calculations
       const sumBlank = list.reduce((acc, s) => acc + (Number(s.blankScore) || 0), 0);
       const avgBlank = sumBlank / count;
-      const pctBlank = Math.round((avgBlank / totalBlanksCount) * 100);
+      const pctBlank = Math.round((avgBlank / Math.max(1, totalBlanksCount)) * 100);
 
       const sumQuiz = list.reduce((acc, s) => acc + (Number(s.quizScore) || 0), 0);
       const avgQuiz = sumQuiz / count;
@@ -2881,7 +3569,6 @@ function doGet(e) {
       document.getElementById('kpi-quiz-avg').textContent = `${avgQuiz.toFixed(1)}점 (${pctQuiz}%)`;
       document.getElementById('kpi-note-rate').textContent = `${pctNote}% (${noteWrittenCount}명)`;
 
-      // 2) Question-level Accuracy (Blanks 1..58 + Quiz 1..5)
       const questionStats = [];
       for (let b = 1; b <= totalBlanksCount; b++) {
         let correctCnt = 0;
@@ -2930,7 +3617,6 @@ function doGet(e) {
         </div>
       `).join('');
 
-      // 3) Breakdown by Class Group
       const classGroups = {};
       list.forEach(s => {
         const cg = s.classGroup || parseClassGroupFromId(s.studentId);
@@ -2949,7 +3635,7 @@ function doGet(e) {
               <span class="text-slate-400 ml-1">(${arr.length}명)</span>
             </div>
             <div class="flex items-center gap-3 font-bold">
-              <span class="text-emerald-700">빈칸 평균 ${cAvgBlank}/58</span>
+              <span class="text-emerald-700">빈칸 평균 ${cAvgBlank}점</span>
               <span class="text-indigo-700">퀴즈 초시 ${cAvgQuiz}/5</span>
               <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[11px]">5/5 정복 ${conquered}명</span>
             </div>
@@ -2957,7 +3643,6 @@ function doGet(e) {
         `;
       }).join('');
 
-      // 4) Breakdown by Lesson ID
       const lessonGroups = {};
       list.forEach(s => {
         const lid = s.lessonId || LESSON_ID;
@@ -2983,7 +3668,6 @@ function doGet(e) {
       }).join('');
     }
 
-    // Fetch all multi-lesson historical records from Google Sheet (doGet)
     function fetchAllRecordsFromGoogleSheet() {
       if (!gasWebhookUrl) {
         alert('먼저 [📖 구글 시트 설정법]을 눌러 구글 스프레드시트 웹 앱 URL을 저장해 주세요.');
@@ -2998,7 +3682,7 @@ function doGet(e) {
           }
         })
         .catch(() => {
-          alert('구글 시트 데이터를 불러오지 못했습니다. Apps Script에 새 코드(doGet 포함)를 배포하셨는지 확인해 주세요.');
+          alert('구글 시트 데이터를 불러오지 못했습니다.\n\n[해결 방법]\n1. 구글 시트 [확장 프로그램] → [Apps Script]에 새 코드를 붙여넣고 저장(Ctrl+S)한 뒤\n2. 반드시 우측 상단 [배포] → [새 배포]를 눌러 새로 발급된 웹 앱 URL을 수업 화면에 다시 저장해 주세요!');
         });
     }
 
@@ -3027,12 +3711,12 @@ function doGet(e) {
         type: 'FULL_TEACHER_STATE',
         slide: currentSlide,
         strokes: slideStrokes,
-        webhook: gasWebhookUrl
+        webhook: gasWebhookUrl,
+        customDeck: currentCustomSlideDeck
       });
       alert('구글 시트 주소가 저장되었으며, 현재 연결된 모든 학생 기기에도 적용되었습니다.');
     }
 
-    // CSV Export matching exact columns from user's screenshot + Wrong Notes + Feedback
     function exportSubmissionsCSV() {
       const list = getFilteredSubmissions();
       if (list.length === 0) {
@@ -3054,7 +3738,7 @@ function doGet(e) {
           item.classGroup || parseClassGroupFromId(item.studentId),
           item.studentId,
           item.studentName,
-          `${item.blankScore} / ${totalBlanksCount}`,
+          `${item.blankScore} / ${item.totalBlanks || totalBlanksCount}`,
           item.quizInitialSubmitted ? `${item.quizScore} / 5` : '미채점',
           item.quizDetailText || '-',
           item.conquestText || '채점 전',
