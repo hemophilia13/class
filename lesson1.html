@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
   <!-- 독립 HTML 파일로 저장될 때 새 수업 데이터가 자동으로 내장되는 영역 -->
   <script id="preloaded-lesson-config" type="application/json">{}</script>
@@ -980,7 +981,6 @@ function doGet(e) {
     let studentConns = [];
 
     window.addEventListener('DOMContentLoaded', () => {
-      // 1) 독립 저장된 HTML 파일인지 확인하여 내장된 수업 데이터를 자동으로 로드
       let preloaded = null;
       try {
         const rawConfig = document.getElementById('preloaded-lesson-config')?.textContent;
@@ -1040,9 +1040,6 @@ function doGet(e) {
       }
     });
 
-    /*************************************************************
-     * STANDALONE LESSON HTML FILE EXPORT (lesson_phy_단원.html)
-     *************************************************************/
     function syncSuggestedFilename(lessonVal) {
       const clean = (lessonVal || '').trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9가-힣_-]/g, '');
       const suggested = clean ? `lesson_phy_${clean}.html` : 'lesson_phy_3-2-2.html';
@@ -1087,7 +1084,6 @@ function doGet(e) {
       if (!filename) filename = 'lesson_phy_new.html';
       if (!filename.toLowerCase().endsWith('.html')) filename += '.html';
 
-      // 1. 내장할 수업 설정 JSON 구성 (API 키는 절대 포함하지 않음)
       const embeddedConfig = {
         lessonId: LESSON_ID,
         roomCode: roomCode,
@@ -1095,35 +1091,29 @@ function doGet(e) {
         customDeck: currentCustomSlideDeck
       };
 
-      // 2. 현재 문서를 복제하여 깨끗한 배포용 HTML 트리 생성
       const clone = document.documentElement.cloneNode(true);
 
-      // 내장 데이터 주입
       const configScript = clone.querySelector('#preloaded-lesson-config');
       if (configScript) {
         configScript.textContent = JSON.stringify(embeddedConfig);
       }
 
-      // 문서 제목 업데이트
       const titleEl = clone.querySelector('title');
       if (titleEl) {
         titleEl.textContent = `[통합과학2] ${LESSON_ID} - 실시간 양방향 수업 플랫폼`;
       }
 
-      // 교사용 API 키 입력란 비우기 (보안 보호)
       const keyInput = clone.querySelector('#gemini-api-key-input');
       if (keyInput) {
         keyInput.value = '';
         keyInput.removeAttribute('value');
       }
 
-      // 슬라이드 컨테이너 초기화 (파일 열릴 때 DOMContentLoaded에서 깨끗하게 자동 렌더링됨)
       const slidesContainer = clone.querySelector('#slides-container');
       if (slidesContainer) {
         slidesContainer.innerHTML = '';
       }
 
-      // 모든 모달 창 닫힌 상태로 초기화
       const modalIds = [
         '#student-entry-modal', '#pdf-generator-modal', '#save-html-modal',
         '#student-wrong-note-modal', '#quiz-stats-modal', '#qr-invite-modal', '#teacher-dashboard-modal'
@@ -1667,7 +1657,30 @@ function doGet(e) {
     function updateQrAndInviteUrl() {
       const inviteUrl = getStudentInviteLink();
       document.getElementById('student-invite-url').value = inviteUrl;
-      document.getElementById('qr-code-img').src = `[https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=$](https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=10&data=$){encodeURIComponent(inviteUrl)}`;
+      const qrImg = document.getElementById('qr-code-img');
+
+      if (typeof QRCode !== 'undefined') {
+        const tempDiv = document.createElement('div');
+        new QRCode(tempDiv, {
+          text: inviteUrl,
+          width: 240,
+          height: 240,
+          colorDark: '#0f172a',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+        setTimeout(() => {
+          const canvas = tempDiv.querySelector('canvas');
+          const img = tempDiv.querySelector('img');
+          if (canvas) {
+            qrImg.src = canvas.toDataURL('image/png');
+          } else if (img && img.src) {
+            qrImg.src = img.src;
+          }
+        }, 50);
+      } else {
+        qrImg.src = `[https://quickchart.io/qr?size=260&margin=2&text=$](https://quickchart.io/qr?size=260&margin=2&text=$){encodeURIComponent(inviteUrl)}`;
+      }
     }
 
     function applyNewRoomCode() {
