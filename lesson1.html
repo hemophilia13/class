@@ -8,6 +8,8 @@
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  <!-- 독립 HTML 파일로 저장될 때 새 수업 데이터가 자동으로 내장되는 영역 -->
+  <script id="preloaded-lesson-config" type="application/json">{}</script>
   <style>
     * { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; box-sizing: border-box; }
     body { background-color: #0f172a; color: #f8fafc; overflow: hidden; height: 100vh; width: 100vw; user-select: none; margin: 0; }
@@ -72,13 +74,10 @@
   <header class="h-16 bg-slate-900 border-b border-slate-800 px-3 md:px-4 flex items-center justify-between gap-1.5 z-40">
     <div class="flex items-center gap-1.5">
       <span id="role-badge" class="px-2.5 py-1 rounded-lg text-xs font-extrabold bg-indigo-600 text-white">교사 모드</span>
-      <button id="pdf-generator-btn" type="button" onclick="openPdfGeneratorModal()" class="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md cursor-pointer">📄 PDF 슬라이드 자동생성</button>
+      <button id="pdf-generator-btn" type="button" onclick="openPdfGeneratorModal()" class="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-400 hover:to-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md cursor-pointer">📄 PDF 슬라이드 생성</button>
+      <button id="save-html-top-btn" type="button" onclick="openSaveHtmlModal()" class="px-2.5 py-1.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md cursor-pointer" title="현재 생성된 슬라이드를 원하는 파일명(예: lesson_phy_3-2-2.html)으로 저장합니다">💾 수업HTML 저장</button>
       <button id="switch-to-student-btn" type="button" onclick="openStudentEntryModal()" class="px-2 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-500/40 text-emerald-300 font-bold text-xs cursor-pointer">👨‍🎓 학생전환</button>
       <button id="qr-invite-btn" type="button" onclick="openQrInviteModal()" class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center gap-1 shadow-md cursor-pointer">📱 초대 QR</button>
-      <div class="hidden 2xl:flex items-center gap-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 text-xs">
-        <span id="conn-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span id="conn-status-text" class="text-slate-300 font-semibold">실시간 대기 중</span>
-      </div>
     </div>
 
     <div class="flex items-center gap-1.5 bg-slate-800 p-1 rounded-xl border border-slate-700">
@@ -89,7 +88,7 @@
     </div>
 
     <div class="flex items-center gap-1.5">
-      <div id="teacher-wb-bar" class="hidden lg:flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+      <div id="teacher-wb-bar" class="hidden xl:flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
         <button id="wb-toggle-btn" type="button" onclick="toggleWhiteboardMode()" class="px-2 py-1.5 rounded-lg text-xs font-bold bg-slate-700 text-slate-200 cursor-pointer">✏️ 판서 OFF</button>
         <div id="wb-tools" class="hidden items-center gap-1 pl-1 border-l border-slate-700">
           <button type="button" onclick="setPen('#ef4444', 4, false)" class="w-5 h-5 rounded-full bg-red-500 border-2 border-white"></button>
@@ -126,19 +125,19 @@
     <div class="bg-white text-slate-900 rounded-3xl max-w-3xl w-full max-h-[92vh] flex flex-col shadow-2xl overflow-hidden border border-slate-200">
       <div class="p-5 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
         <div>
-          <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-extrabold text-xs">v2.0 자동 모델 매칭 엔진 (404 완벽 차단)</span>
+          <span class="px-2.5 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 font-extrabold text-xs">v2.0 자동 모델 매칭 엔진 + 독립 HTML 파일 저장 지원</span>
           <h2 class="text-xl font-black mt-1">📄 학습지 PDF 첨부 → 양방향 수업 슬라이드 자동 생성</h2>
         </div>
         <button type="button" onclick="closePdfGeneratorModal()" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs cursor-pointer">닫기 ✕</button>
       </div>
       <div class="p-6 overflow-y-auto space-y-5 flex-1 text-xs md:text-sm">
         <div class="p-4 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-950 space-y-1">
-          <div class="font-black text-sm">✨ 학습지 PDF를 올리면 아래 요소가 모두 포함된 슬라이드로 즉시 변환됩니다:</div>
+          <div class="font-black text-sm">✨ PDF 변환 후 슬라이드를 확인하고 [💾 수업HTML 저장]을 누르면 새 파일(예: lesson_phy_3-2-2.html)로 저장됩니다!</div>
           <p class="text-xs text-indigo-900">• 문항/시각자료 추출 • 블룸 분류 & DOK 수준 배지 • 과학 탐구 흐름 발문 • 용어 툴팁 • 기본/심화 과제 • 빈칸 & 5문항 확인 퀴즈</p>
         </div>
         <div class="space-y-1.5">
           <div class="flex items-center justify-between">
-            <label class="font-extrabold text-slate-800">1️⃣ Google Gemini API 키 입력 (교사 브라우저에만 저장)</label>
+            <label class="font-extrabold text-slate-800">1️⃣ Google Gemini API 키 입력 (파일 저장 시 외부에 유출되지 않도록 자동 삭제됨)</label>
             <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs font-extrabold text-indigo-600 underline">🔑 무료 API 키 발급받기 ↗</a>
           </div>
           <div class="flex gap-2">
@@ -147,13 +146,17 @@
           </div>
           <p id="api-key-test-result" class="text-xs font-bold hidden"></p>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label class="block font-extrabold text-slate-800 mb-1">2️⃣ 새 수업 차시 고유 이름</label>
-            <input id="new-lesson-id-input" type="text" placeholder="예: 3-2-2 과학 기술과 윤리" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-xs">
+            <input id="new-lesson-id-input" type="text" placeholder="예: 3-2-2 과학 기술과 윤리" oninput="syncSuggestedFilename(this.value)" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-bold text-xs">
           </div>
           <div>
-            <label class="block font-extrabold text-slate-800 mb-1">3️⃣ 고등학교 과학 학습지 PDF 파일 선택</label>
+            <label class="block font-extrabold text-slate-800 mb-1">3️⃣ 저장할 HTML 파일명 (선택)</label>
+            <input id="modal-filename-input" type="text" placeholder="예: lesson_phy_3-2-2.html" class="w-full px-3.5 py-2.5 rounded-xl border border-teal-400 bg-teal-50/40 font-mono font-bold text-xs text-teal-900">
+          </div>
+          <div>
+            <label class="block font-extrabold text-slate-800 mb-1">4️⃣ 학습지 PDF 파일 선택</label>
             <input id="pdf-file-input" type="file" accept="application/pdf" class="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-50 text-xs font-bold cursor-pointer">
           </div>
         </div>
@@ -169,7 +172,47 @@
       </div>
       <div class="p-4 bg-slate-100 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2">
         <button type="button" onclick="resetToDefaultLesson()" class="px-3.5 py-2 rounded-xl bg-white hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold text-xs cursor-pointer">↩ 기본 수업(3-2-1)으로 복원</button>
-        <button id="start-pdf-gen-btn" type="button" onclick="handlePdfSlideGeneration()" class="px-6 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-lg cursor-pointer">🚀 PDF 분석하여 수업 슬라이드 자동 생성하기</button>
+        <div class="flex items-center gap-2">
+          <button type="button" onclick="openSaveHtmlModal()" class="px-4 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-xs shadow cursor-pointer">💾 현재 슬라이드 HTML 파일 저장</button>
+          <button id="start-pdf-gen-btn" type="button" onclick="handlePdfSlideGeneration()" class="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-lg cursor-pointer">🚀 PDF로 슬라이드 자동 생성</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4-B. 독립 수업 HTML 파일 저장 모달 (lesson_phy_단원.html) -->
+  <div id="save-html-modal" class="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md hidden items-center justify-center p-4 selectable-text">
+    <div class="bg-white text-slate-900 rounded-3xl max-w-lg w-full p-7 shadow-2xl border border-slate-200">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+        <div>
+          <span class="px-2.5 py-1 rounded-full bg-teal-100 text-teal-800 font-extrabold text-xs">독립된 수업 링크 생성</span>
+          <h2 class="text-xl font-black text-slate-900 mt-1">💾 새 수업 슬라이드 HTML 파일로 저장</h2>
+        </div>
+        <button type="button" onclick="closeSaveHtmlModal()" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer">닫기 ✕</button>
+      </div>
+
+      <div class="mt-4 space-y-4 text-xs md:text-sm">
+        <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+          <div class="text-xs font-bold text-slate-500">현재 내장될 수업 단원(차시 ID)</div>
+          <div id="save-modal-lesson-title" class="text-base font-black text-indigo-900">3-2-1 과학 기술과 미래 사회</div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-extrabold text-slate-700 mb-1.5">저장할 파일 이름 입력 (확장자 .html은 자동 추가됩니다)</label>
+          <input id="export-filename-input" type="text" value="lesson_phy_3-2-2.html" placeholder="예: lesson_phy_3-2-2" onkeydown="if(event.key==='Enter') exportStandaloneLessonHtml()" class="w-full px-4 py-3 rounded-xl border-2 border-teal-500 bg-teal-50/30 font-mono font-black text-base text-slate-900 focus:outline-none">
+          <p class="text-[11px] text-slate-500 mt-1.5">
+            💡 저장한 파일을 GitHub에 업로드하면 <code>https://아이디.github.io/저장소/<strong id="preview-filename-span" class="text-teal-700">lesson_phy_3-2-2.html</strong></code> 주소로 새 수업 링크가 분리됩니다!
+          </p>
+        </div>
+
+        <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 leading-relaxed">
+          🔒 <strong>안심 보안 적용:</strong> 다운로드되는 파일에는 현재 생성된 슬라이드, 빈칸, 퀴즈, 구글 시트 연동 주소만 영구 내장되며, <strong>선생님의 Gemini API 키는 자동으로 제거</strong>됩니다.
+        </div>
+      </div>
+
+      <div class="mt-6 flex items-center justify-end gap-2">
+        <button type="button" onclick="closeSaveHtmlModal()" class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs cursor-pointer">취소</button>
+        <button type="button" onclick="exportStandaloneLessonHtml()" class="px-6 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-black text-sm shadow-lg cursor-pointer">📥 HTML 파일 다운로드</button>
       </div>
     </div>
   </div>
@@ -478,10 +521,10 @@ function doGet(e) {
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
             <div onclick="openPdfGeneratorModal()" class="p-4 rounded-2xl bg-rose-50 hover:bg-rose-100 border-2 border-rose-300 flex items-center justify-between cursor-pointer transition">
-              <div><div class="text-xs font-extrabold text-rose-700">교사용 AI 슬라이드 빌더</div><div class="font-black text-slate-900">📄 학습지 PDF로 새 수업 자동 생성</div><div class="text-xs text-slate-600 mt-0.5">클릭하여 다른 차시 PDF 업로드</div></div><span class="text-2xl">✨</span>
+              <div><div class="text-xs font-extrabold text-rose-700">교사용 AI 슬라이드 빌더</div><div class="font-black text-slate-900">📄 학습지 PDF로 새 수업 자동 생성</div><div class="text-xs text-slate-600 mt-0.5">변환 후 lesson_phy_단원.html 저장 가능</div></div><span class="text-2xl">✨</span>
             </div>
-            <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
-              <div><div class="text-xs font-bold text-indigo-600">과학 탐구 및 차별화 설계</div><div class="font-extrabold text-slate-800">기본·심화 과제 + 탐구 흐름 발문</div><div class="text-xs text-slate-500 mt-0.5">총 58개 빈칸 · 5문항 확인 퀴즈</div></div><span class="text-2xl">🔬</span>
+            <div onclick="openSaveHtmlModal()" class="p-4 rounded-2xl bg-teal-50 hover:bg-teal-100 border-2 border-teal-300 flex items-center justify-between cursor-pointer transition">
+              <div><div class="text-xs font-extrabold text-teal-700">독립 수업 파일 내보내기</div><div class="font-black text-slate-900">💾 수업HTML 파일로 저장하기</div><div class="text-xs text-slate-600 mt-0.5">원하는 파일명으로 다운로드</div></div><span class="text-2xl">💾</span>
             </div>
             <div onclick="openStudentEntryModal()" class="p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 flex items-center justify-between cursor-pointer transition">
               <div><div class="text-xs font-extrabold text-emerald-700">학생이신가요?</div><div class="font-black text-slate-900">여기를 눌러 학번·이름 입력하기</div><div class="text-xs text-slate-600 mt-0.5">클릭 시 학생 입력 모드로 즉시 시작</div></div><span class="text-2xl">✍️</span>
@@ -937,8 +980,24 @@ function doGet(e) {
     let studentConns = [];
 
     window.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('slides-container').innerHTML = buildDefaultSlidesHTML();
-      initBlankMetadata();
+      // 1) 독립 저장된 HTML 파일인지 확인하여 내장된 수업 데이터를 자동으로 로드
+      let preloaded = null;
+      try {
+        const rawConfig = document.getElementById('preloaded-lesson-config')?.textContent;
+        if (rawConfig && rawConfig.trim() !== '{}') {
+          preloaded = JSON.parse(rawConfig);
+        }
+      } catch (e) {}
+
+      if (preloaded && preloaded.customDeck) {
+        if (preloaded.gasWebhookUrl && !gasWebhookUrl) gasWebhookUrl = preloaded.gasWebhookUrl;
+        if (preloaded.roomCode) roomCode = preloaded.roomCode;
+        applyCustomSlideDeck(preloaded.customDeck, false);
+      } else {
+        document.getElementById('slides-container').innerHTML = buildDefaultSlidesHTML();
+        initBlankMetadata();
+      }
+
       initWhiteboardCanvas();
       initKeyboardNav();
 
@@ -957,19 +1016,138 @@ function doGet(e) {
         baseInput.value = cleanBaseUrl.startsWith('http') ? cleanBaseUrl : 'https://hemophilia13.github.io/science/lesson1.html';
       }
 
+      const fnInput = document.getElementById('export-filename-input');
+      if (fnInput) {
+        fnInput.addEventListener('input', () => {
+          let v = fnInput.value.trim() || 'lesson_phy_new';
+          if (!v.toLowerCase().endsWith('.html')) v += '.html';
+          const span = document.getElementById('preview-filename-span');
+          if (span) span.textContent = v;
+        });
+      }
+
       const params = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
       const urlRoom = params.get('room') || hashParams.get('room');
       const forceRole = params.get('role') || hashParams.get('role');
 
       if ((urlRoom || forceRole === 'student') && forceRole !== 'teacher') {
-        roomCode = (urlRoom || 'SCI2026').trim().toUpperCase();
+        roomCode = (urlRoom || roomCode || 'SCI2026').trim().toUpperCase();
         openStudentEntryModal();
       } else {
         if (urlRoom) roomCode = urlRoom.trim().toUpperCase();
         startTeacherSession();
       }
     });
+
+    /*************************************************************
+     * STANDALONE LESSON HTML FILE EXPORT (lesson_phy_단원.html)
+     *************************************************************/
+    function syncSuggestedFilename(lessonVal) {
+      const clean = (lessonVal || '').trim().split(/\s+/)[0].replace(/[^a-zA-Z0-9가-힣_-]/g, '');
+      const suggested = clean ? `lesson_phy_${clean}.html` : 'lesson_phy_3-2-2.html';
+      const modalFn = document.getElementById('modal-filename-input');
+      if (modalFn) modalFn.value = suggested;
+      const exportFn = document.getElementById('export-filename-input');
+      if (exportFn) exportFn.value = suggested;
+      const span = document.getElementById('preview-filename-span');
+      if (span) span.textContent = suggested;
+    }
+
+    function openSaveHtmlModal() {
+      document.getElementById('save-modal-lesson-title').textContent = LESSON_ID;
+      const modalFn = document.getElementById('modal-filename-input')?.value?.trim();
+      const exportFn = document.getElementById('export-filename-input');
+      if (modalFn && exportFn) {
+        exportFn.value = modalFn;
+      } else if (exportFn && LESSON_ID !== "3-2-1 과학 기술과 미래 사회") {
+        const codePart = LESSON_ID.split(/\s+/)[0].replace(/[^a-zA-Z0-9가-힣_-]/g, '');
+        exportFn.value = `lesson_phy_${codePart || 'new'}.html`;
+      }
+      const span = document.getElementById('preview-filename-span');
+      if (span && exportFn) {
+        let v = exportFn.value.trim();
+        if (!v.toLowerCase().endsWith('.html')) v += '.html';
+        span.textContent = v;
+      }
+      const m = document.getElementById('save-html-modal');
+      m.classList.remove('hidden');
+      m.classList.add('flex');
+      setTimeout(() => exportFn?.focus(), 100);
+    }
+
+    function closeSaveHtmlModal() {
+      const m = document.getElementById('save-html-modal');
+      m.classList.add('hidden');
+      m.classList.remove('flex');
+    }
+
+    function exportStandaloneLessonHtml() {
+      let filename = (document.getElementById('export-filename-input')?.value || '').trim();
+      if (!filename) filename = 'lesson_phy_new.html';
+      if (!filename.toLowerCase().endsWith('.html')) filename += '.html';
+
+      // 1. 내장할 수업 설정 JSON 구성 (API 키는 절대 포함하지 않음)
+      const embeddedConfig = {
+        lessonId: LESSON_ID,
+        roomCode: roomCode,
+        gasWebhookUrl: gasWebhookUrl,
+        customDeck: currentCustomSlideDeck
+      };
+
+      // 2. 현재 문서를 복제하여 깨끗한 배포용 HTML 트리 생성
+      const clone = document.documentElement.cloneNode(true);
+
+      // 내장 데이터 주입
+      const configScript = clone.querySelector('#preloaded-lesson-config');
+      if (configScript) {
+        configScript.textContent = JSON.stringify(embeddedConfig);
+      }
+
+      // 문서 제목 업데이트
+      const titleEl = clone.querySelector('title');
+      if (titleEl) {
+        titleEl.textContent = `[통합과학2] ${LESSON_ID} - 실시간 양방향 수업 플랫폼`;
+      }
+
+      // 교사용 API 키 입력란 비우기 (보안 보호)
+      const keyInput = clone.querySelector('#gemini-api-key-input');
+      if (keyInput) {
+        keyInput.value = '';
+        keyInput.removeAttribute('value');
+      }
+
+      // 슬라이드 컨테이너 초기화 (파일 열릴 때 DOMContentLoaded에서 깨끗하게 자동 렌더링됨)
+      const slidesContainer = clone.querySelector('#slides-container');
+      if (slidesContainer) {
+        slidesContainer.innerHTML = '';
+      }
+
+      // 모든 모달 창 닫힌 상태로 초기화
+      const modalIds = [
+        '#student-entry-modal', '#pdf-generator-modal', '#save-html-modal',
+        '#student-wrong-note-modal', '#quiz-stats-modal', '#qr-invite-modal', '#teacher-dashboard-modal'
+      ];
+      modalIds.forEach(sel => {
+        const el = clone.querySelector(sel);
+        if (el) {
+          el.classList.add('hidden');
+          el.classList.remove('flex');
+        }
+      });
+
+      const finalHtmlString = '<!DOCTYPE html>\n' + clone.outerHTML;
+      const blob = new Blob([finalHtmlString], { type: 'text/html;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      closeSaveHtmlModal();
+      alert(`💾 [${filename}] 파일이 다운로드되었습니다!\n\n이 파일을 GitHub 저장소에 업로드하시면\nhttps://아이디.github.io/저장소/${filename}\n주소로 독립된 새 수업 링크가 만들어집니다!`);
+    }
 
     function initBlankMetadata() {
       blankMeta = {};
@@ -1032,7 +1210,6 @@ function doGet(e) {
       m.classList.add('hidden'); m.classList.remove('flex');
     }
 
-    // API Key Test Button Function
     async function testGeminiKeyConnection() {
       const apiKey = (document.getElementById('gemini-api-key-input')?.value || '').trim();
       const resEl = document.getElementById('api-key-test-result');
@@ -1087,7 +1264,6 @@ function doGet(e) {
       return parts;
     }
 
-    // [404 완벽 차단 버전] 내 API 키가 지원하는 모델을 직접 조회한 뒤, schema 없이 호환성 100%로 호출
     async function callGeminiWithAutoFallback(apiKey, masterPrompt, multimodalParts) {
       let availableModels = [];
 
@@ -1224,19 +1400,22 @@ function doGet(e) {
         statusTitle.textContent = '3/3 단계: 슬라이드 렌더링 및 동기화 중...';
         progBar.style.width = '100%';
         applyCustomSlideDeck(deck, true);
+        syncSuggestedFilename(deck.lessonId);
 
         setTimeout(() => {
           closePdfGeneratorModal();
           progBox.classList.add('hidden');
           startBtn.disabled = false;
-          startBtn.textContent = '🚀 PDF 분석하여 수업 슬라이드 자동 생성하기';
-          alert(`🎉 [${deck.title}] 슬라이드 생성이 완료되었습니다!`);
+          startBtn.textContent = '🚀 PDF로 슬라이드 자동 생성';
+          if (confirm(`🎉 [${deck.title}] 슬라이드 생성이 완료되었습니다!\n\n지금 바로 슬라이드를 확인하신 후 상단의 [💾 수업HTML 저장] 버튼을 누르시거나, [확인]을 눌러 독립된 HTML 파일(예: lesson_phy_단원.html)로 바로 저장하시겠습니까?`)) {
+            openSaveHtmlModal();
+          }
         }, 400);
       } catch (err) {
         alert('슬라이드 자동 생성 안내:\n' + err.message);
         progBox.classList.add('hidden');
         startBtn.disabled = false;
-        startBtn.textContent = '🚀 PDF 분석하여 수업 슬라이드 자동 생성하기';
+        startBtn.textContent = '🚀 PDF로 슬라이드 자동 생성';
       }
     }
 
@@ -1264,7 +1443,7 @@ function doGet(e) {
         <section class="slide-page active" data-slide="0">
           <div>
             <div class="flex items-center justify-between pb-3 border-b-2 border-slate-900">
-              <span class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-black text-xs">고등학교 과학 · AI 자동 생성 슬라이드</span>
+              <span class="px-3 py-1 rounded-lg bg-indigo-600 text-white font-black text-xs">고등학교 과학 · 양방향 수업 슬라이드</span>
               <span class="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-extrabold">블룸 & DOK 맞춤형 설계</span>
             </div>
             <div class="mt-6 bg-gradient-to-br from-indigo-900 via-indigo-800 to-slate-900 text-white rounded-3xl p-8 shadow-xl">
@@ -1276,8 +1455,13 @@ function doGet(e) {
               </div>
             </div>
           </div>
-          <div class="p-4 rounded-2xl bg-slate-100 border border-slate-200 flex justify-between text-xs font-bold text-slate-600">
-            <span>📌 총 빈칸 ${(deck.blanks || []).length}개 · 마무리 확인 퀴즈 5문항</span><span>표지 슬라이드</span>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+            <div onclick="openSaveHtmlModal()" class="p-4 rounded-2xl bg-teal-50 hover:bg-teal-100 border-2 border-teal-300 flex items-center justify-between cursor-pointer transition">
+              <div><div class="text-xs font-extrabold text-teal-700">교사용 파일 저장</div><div class="font-black text-slate-900">💾 이 수업을 lesson_phy_단원.html로 저장하기</div><div class="text-xs text-slate-600 mt-0.5">GitHub 업로드용 독립 파일 다운로드</div></div><span class="text-2xl">📥</span>
+            </div>
+            <div onclick="openStudentEntryModal()" class="p-4 rounded-2xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 flex items-center justify-between cursor-pointer transition">
+              <div><div class="text-xs font-extrabold text-emerald-700">학생이신가요?</div><div class="font-black text-slate-900">여기를 눌러 학번·이름 입력하기</div><div class="text-xs text-slate-600 mt-0.5">총 빈칸 ${(deck.blanks || []).length}개 · 확인 퀴즈 5문항</div></div><span class="text-2xl">✍️</span>
+            </div>
           </div>
         </section>
       `;
@@ -1394,6 +1578,7 @@ function doGet(e) {
       badge.className = 'px-2.5 py-1 rounded-lg text-xs font-extrabold bg-indigo-600 text-white';
 
       document.getElementById('pdf-generator-btn').classList.remove('hidden');
+      document.getElementById('save-html-top-btn').classList.remove('hidden');
       document.getElementById('switch-to-student-btn').classList.remove('hidden');
       document.getElementById('qr-invite-btn').classList.remove('hidden');
       document.getElementById('sync-lock-btn').classList.remove('hidden');
@@ -1431,6 +1616,7 @@ function doGet(e) {
       badge.className = 'px-2.5 py-1 rounded-lg text-xs font-extrabold bg-emerald-600 text-white';
 
       document.getElementById('pdf-generator-btn').classList.add('hidden');
+      document.getElementById('save-html-top-btn').classList.add('hidden');
       document.getElementById('switch-to-student-btn').classList.add('hidden');
       document.getElementById('qr-invite-btn').classList.add('hidden');
       document.getElementById('sync-lock-btn').classList.add('hidden');
@@ -2051,7 +2237,6 @@ function doGet(e) {
 
         if (appRole === 'teacher') {
           peer = new Peer(hostPeerId);
-          peer.on('open', () => updateConnStatus(`실시간 방 활성 (${safeRoom})`, true));
           peer.on('connection', (conn) => {
             studentConns.push(conn);
             conn.on('data', (data) => handleIncomingMessage(data));
@@ -2063,19 +2248,11 @@ function doGet(e) {
           peer = new Peer();
           peer.on('open', () => {
             teacherConn = peer.connect(hostPeerId, { reliable: true });
-            teacherConn.on('open', () => {
-              updateConnStatus('선생님과 실시간 연결됨', true);
-              submitStudentWork(false);
-            });
+            teacherConn.on('open', () => submitStudentWork(false));
             teacherConn.on('data', (data) => handleIncomingMessage(data));
           });
         }
       } catch (err) {}
-    }
-
-    function updateConnStatus(text, ok) {
-      const txt = document.getElementById('conn-status-text');
-      if (txt) txt.textContent = text;
     }
 
     function broadcastMessage(payload) {
